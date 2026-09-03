@@ -5,8 +5,8 @@ import pygame, sys, random
 from pygame.math import Vector2
 from pygame.transform import flip, rotate, scale
 
-SNAKE_UPDATE_MS = 166
-FRAME_RATE = 30  # more authentic than 60 fps
+SNAKE_UPDATE_MS = 175
+FRAME_RATE = 25  # more authentic than 60 fps
 
 CELL_SIZE = 20
 
