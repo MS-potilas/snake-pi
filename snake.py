@@ -1,7 +1,7 @@
 # Snake
 # Created by Sara Martínez
 
-import pygame, sys, random
+import pygame, sys, random, glob
 from pygame.math import Vector2
 from pygame.transform import flip, rotate, scale
 
@@ -149,17 +149,17 @@ class Snake:
         self.body = [Vector2(5, 12), Vector2(4, 12), Vector2(3, 12)]
         self.body_directions = ["R", "R", "R"]
         self.direction = Vector2(1, 0)
-        self.last_direction = self.direction
+        self.current_direction = self.direction
         self.add_block = False
         self.eat_sound = pygame.mixer.Sound("sounds/eat.wav")
         self.wall_hit_sound = pygame.mixer.Sound("sounds/game_over.wav")
 
     def get_direction_name(self):
-        if self.direction == Vector2(-1, 0):
+        if self.current_direction == Vector2(-1, 0):
             return "L"
-        elif self.direction == Vector2(0, -1):
+        elif self.current_direction == Vector2(0, -1):
             return "U"
-        elif self.direction == Vector2(0, 1):
+        elif self.current_direction == Vector2(0, 1):
             return "D"
         else:
             return "R"
@@ -191,6 +191,7 @@ class Snake:
             GAME_SURFACE.blit(snake_surface, block_rect)
 
     def update(self):
+        self.current_direction = self.direction
         self.body.insert(0, self.body[0] + self.direction)
         self.body_directions.insert(0, self.get_direction_name())
         if self.add_block == True:
@@ -198,13 +199,12 @@ class Snake:
         else:
             self.body = self.body[:-1]
             self.body_directions = self.body_directions[:-1]
-        self.last_direction = self.direction
 
     def reset(self):
         self.body = [Vector2(5, 12), Vector2(4, 12), Vector2(3, 12)]
         self.body_directions = ["R", "R", "R"]
         self.direction = Vector2(1, 0)
-        self.last_direction = self.direction
+        self.current_direction = self.direction
 
 
 class Food:
@@ -270,7 +270,8 @@ class Game:
         self.ui_timer = False
         self.animal = Animal(self.snake.body, self.food.position, self.active_timer)
         self.joysticks = Joystick()
-        self.nokia_tune = pygame.mixer.Sound("sounds/nokia_tune.wav")
+        tunename = random.choice(glob.glob('sounds/nokia_tune*.wav'))
+        self.nokia_tune = pygame.mixer.Sound(tunename)
         
     def draw(self):
         self.snake.draw()
@@ -352,13 +353,13 @@ class Game:
                 if ev.type == SNAKE_UPDATE:
                     self.joysticks.get_joy()
                     if self.status == 'PLAYING':
-                        if self.joysticks.y_move == -1 and self.snake.last_direction != Vector2(0, 1):
+                        if self.joysticks.y_move == -1 and self.snake.current_direction != Vector2(0, 1):
                             self.snake.direction = Vector2(0, -1)
-                        elif self.joysticks.y_move == 1 and self.snake.last_direction != Vector2(0, -1):
+                        elif self.joysticks.y_move == 1 and self.snake.current_direction != Vector2(0, -1):
                             self.snake.direction = Vector2(0, 1)
-                        elif self.joysticks.x_move == -1 and self.snake.last_direction != Vector2(1, 0):
+                        elif self.joysticks.x_move == -1 and self.snake.current_direction != Vector2(1, 0):
                             self.snake.direction = Vector2(-1, 0)
-                        elif self.joysticks.x_move == 1 and self.snake.last_direction != Vector2(-1, 0):
+                        elif self.joysticks.x_move == 1 and self.snake.current_direction != Vector2(-1, 0):
                             self.snake.direction = Vector2(1, 0)
                     if len(self.joysticks.buttons):
                         # upper buttons:
@@ -379,13 +380,13 @@ class Game:
                         self.score = 0
                         self.status = "PLAYING"
                     if self.status == 'PLAYING':
-                        if ev.key == pygame.K_UP and self.snake.last_direction != Vector2(0, 1):
+                        if ev.key == pygame.K_UP and self.snake.current_direction != Vector2(0, 1):
                             self.snake.direction = Vector2(0, -1)
-                        if ev.key == pygame.K_DOWN and self.snake.last_direction != Vector2(0, -1):
+                        if ev.key == pygame.K_DOWN and self.snake.current_direction != Vector2(0, -1):
                             self.snake.direction = Vector2(0, 1)
-                        if ev.key == pygame.K_LEFT and self.snake.last_direction != Vector2(1, 0):
+                        if ev.key == pygame.K_LEFT and self.snake.current_direction != Vector2(1, 0):
                             self.snake.direction = Vector2(-1, 0)
-                        if ev.key == pygame.K_RIGHT and self.snake.last_direction != Vector2(-1, 0):
+                        if ev.key == pygame.K_RIGHT and self.snake.current_direction != Vector2(-1, 0):
                             self.snake.direction = Vector2(1, 0)
                         
 
