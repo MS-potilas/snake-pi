@@ -86,6 +86,7 @@ scrolltext = '      Welcome to Snake Pi, a remake of the 1998 Nokia game "Snake 
 SCROLLTEXT_SPEED = 5
 
 
+pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=512)
 # init Pygame
 pygame.init()
 
@@ -196,7 +197,6 @@ EV_PLAY_MUSIC = pygame.USEREVENT + 4
 
 pygame.time.set_timer(EV_SNAKE_UPDATE, SNAKE_UPDATE_MS)
 pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
-pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
 
 
 # quick and dirty class for reading joysticks
