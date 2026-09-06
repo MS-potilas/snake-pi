@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import pygame, sys, random, glob, os, shelve
+import pygame, sys, random, glob, os
 from pygame.math import Vector2
 from pygame.transform import flip, rotate, scale
 
@@ -10,59 +10,83 @@ from pygame.transform import flip, rotate, scale
 # Snake Pi made for RetroPie, but can be run also without it.
 
 
-FRAME_RATE = 30         # more authentic than 60 fps
+# FPS
+FRAME_RATE = 30                     # more authentic than 60 fps?
 
+# timeouts etc
 SNAKE_UPDATE_MS = 180
 ENABLE_INPUT_AFTER_GAMEOVER_MS = 3000
-GAMEOVER_TIMEOUT_MS = 10000
-PLAY_TITLE_MUSIC_AFTER_MS = 420
+GAMEOVER_TIMEOUT_MS = 12000
+PLAY_TITLE_MUSIC_AFTER_MS = 500
 
 # Colors (R, G, B)
 GREEN = (112, 142, 83)
 TRUEGREEN = (0x6d, 0x8b, 0x50)      # green left after ghosting effect
 BLACK = (0x1f, 0x22, 0x18)          # greenish LCD-black
-LESSBLACK = (0x30, 0x35, 0x2A)      # something odd
+LESSBLACK = (0x30, 0x35, 0x2A)      # something semi-odd for scrolltext
 
-ANIMAL_FREQUENCY = 5        # normal is 5
+ANIMAL_FREQUENCY = 5                # normally 5
+BONUS_ANIMALS_AFTER_SCORE = 500     # normally 500
 
-FONT_SIZE = 34
+MOBILE_PHONE_ANIMAL_INDEX = 10      # eating this plays nokia tune
+
+FONT_SIZE = 34                      # score and animal timer
 SCROLL_FONT_SIZE = 24
-TOP_OFFSET = 40
-OFFSET = 80
 
-CELL_SIZE = 22    # 20 is compatible with the overlay
+OFFSET = 80                         # border width
+TOP_OFFSET = 40                     # additional top border
+
+CELL_SIZE = 22                      # 22 compatible with both overlays
+
+# 3310 play field
 NUM_OF_CELLS_WIDTH = 29
 NUM_OF_CELLS_HEIGHT = 19
 
 cmdline = " " + (" ".join(sys.argv)) + " "
 
-if " --7110" in cmdline:
+if "--7110 " in cmdline:
     casename = 'images/nokia_case7110.png'
-elif " --3310" in cmdline:
+elif "--3310 " in cmdline:
     casename = 'images/nokia_case3310.png'
-elif " --nocase" in cmdline:
+elif "--nocase " in cmdline:
     casename = ''
 else:
     casename = random.choice(glob.glob('images/nokia_case*.png'))
 
+# 7110 play field
 if '7110' in casename:
     # same area as with 3310 works, but this is more optimized:
     NUM_OF_CELLS_WIDTH = 26
     NUM_OF_CELLS_HEIGHT = 21
 
+# play field when no overlay
+if casename == '':
+    NUM_OF_CELLS_WIDTH = 30
+    NUM_OF_CELLS_HEIGHT = 20
+    
 
 # game area size
 GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
 GAME_H = TOP_OFFSET + 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_HEIGHT
 
+WINDOW_W = 1280
+WINDOW_H = 720
+
+if "--nocase " in cmdline:
+    OFFSET = 50
+    GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
+    GAME_H = TOP_OFFSET + 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_HEIGHT
+    WINDOW_W = GAME_W
+    WINDOW_H = GAME_H
+
 # scroll text
 
-scrolltext = "      Welcome to Snake Pi, a remake of the 1998 Nokia game Snake II. Snake Pi was made specifically for RetroPie. Thanks to Sara Martinez for the groundwork. Best regards, MS-potilas 2026.    Feel free to copy and reuse my work.    High score is [HS]."
+scrolltext = '      Welcome to Snake Pi, a remake of the 1998 Nokia game "Snake II". Snake Pi was made specifically for RetroPie, hence the name. Thanks to Sara Martinez for the groundwork. Kind regards, MS-potilas, in 2026.    Feel free to copy and reuse my work.    High score is [HS].'
 
-SCROLLTEXT_SPEED = 4
+SCROLLTEXT_SPEED = 5
 
 
-# alustetaan Pygame
+# init Pygame
 pygame.init()
 
 # get full screen size (for example 1920x1080 or 1280x720)
@@ -79,6 +103,7 @@ OFFSET_X = (OVERLAY_W - GAME_W) // 2
 OFFSET_Y = (OVERLAY_H - GAME_H) // 2
 
 
+# don't know if this works on windows or mac
 def is_windowing_system():
     if sys.platform == 'windows' or sys.platform == 'darwin': # windows or mac
         return True
@@ -89,9 +114,9 @@ def is_windowing_system():
 
 fullscreen = False
 
-if (is_windowing_system() and not " --fullscreen " in cmdline) or " --windowed " in cmdline:
+if (is_windowing_system() and not "--fullscreen " in cmdline) or "--windowed " in cmdline:
     # create a window (under X or Wayland, for example)
-    MAIN_SCREEN = pygame.display.set_mode((1280, 720), pygame.RESIZABLE )
+    MAIN_SCREEN = pygame.display.set_mode((WINDOW_W, WINDOW_H), pygame.RESIZABLE )
     pygame.display.set_caption("Snake Pi")
 else:
     # create full screen display 
@@ -125,8 +150,8 @@ titleimage = pygame.image.load("images/snake_pi.png").convert_alpha()
 GAME_SURFACE = pygame.Surface((GAME_W, GAME_H))
 
 
-IMG_NAMES = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6"]
-IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)) for name in IMG_NAMES}
+IMG_NAMES = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6", "animal7", "animal8", "animal9", "animal10"]
+IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)).convert_alpha() for name in IMG_NAMES}
 FORMAT_IMAGES = {
     "food": scale(IMAGES["food"], (CELL_SIZE, CELL_SIZE)),
     "head_R": scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)),
@@ -161,12 +186,6 @@ FORMAT_IMAGES = {
     "fturn_L": flip(scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)), True, False),
     "fturn_U": rotate(scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)), 90),
     "fturn_D": rotate(scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)), 180),
-    "animal1": scale(IMAGES["animal1"], (CELL_SIZE, CELL_SIZE)),
-    "animal2": scale(IMAGES["animal2"], (CELL_SIZE, CELL_SIZE)),
-    "animal3": scale(IMAGES["animal3"], (CELL_SIZE, CELL_SIZE)),
-    "animal4": scale(IMAGES["animal4"], (CELL_SIZE, CELL_SIZE)),
-    "animal5": scale(IMAGES["animal5"], (CELL_SIZE, CELL_SIZE)),
-    "animal6": scale(IMAGES["animal6"], (CELL_SIZE, CELL_SIZE))
 }
 
 # User events
@@ -237,6 +256,8 @@ class Snake:
         self.reset()
         self.add_block = False
         self.eat_sound = pygame.mixer.Sound("sounds/eat.wav")
+        self.eat_phone_sound = pygame.mixer.Sound("sounds/nokia_tune.wav")
+        self.eat_phone_sound.set_volume(0.5)
         self.gameover_sound = pygame.mixer.Sound("sounds/game_over.wav")
         self.highscore_sound = pygame.mixer.Sound("sounds/game_over_high.wav")
 
@@ -324,14 +345,19 @@ class Food:
 class Animal:
     def __init__(self, snake_body, food_position, active_timer):
         self.position = self.create_random_pos(snake_body, food_position)
-        self.image = FORMAT_IMAGES["animal1"]
-        self.bigimage =  scale(self.image, (round(CELL_SIZE*1.5), round(CELL_SIZE*1.5)))
-
+        self.image = None
+        self.bigimage = None
+        self.phone_animal = False
+        self.create_random_image()
     
-    def create_random_image(self):
-        random_number = random.randint(1, 6)
-        random_animal_surface = FORMAT_IMAGES["animal" + str(random_number)]
-        return random_animal_surface
+    def create_random_image(self, extended = False):
+        random_number = random.randint(1, 10 if extended else 6)
+        if random_number  == MOBILE_PHONE_ANIMAL_INDEX:
+            self.phone_animal = True
+        else:
+            self.phone_animal = False
+        self.image = scale(IMAGES["animal" + str(random_number)], (CELL_SIZE, CELL_SIZE))
+        self.bigimage =  scale(IMAGES["animal" + str(random_number)], (round(CELL_SIZE*1.5), round(CELL_SIZE*1.5))) 
     
     def draw(self, active_timer):
         if active_timer:
@@ -372,6 +398,7 @@ class Game:
 
         self.scroll_font = pygame.font.Font("fonts/nokiafc22.ttf", SCROLL_FONT_SIZE)
         
+        self.gameover_text = ''
         self.high_score = 0
         self.load_highscore()
         self.scroll_text = None
@@ -380,24 +407,27 @@ class Game:
     
     def load_highscore(self):
         try:
-            d = shelve.open('.highscore')
-            self.high_score = d['highscore']
-            d.close()
+            with open('.highscore', "r") as f:
+                self.high_score = int(f.read())
         except:
             pass
             
     def save_highscore(self):
-        d = shelve.open('.highscore')
-        d['highscore'] = self.high_score
-        d.close()        
+        try:
+            with open('.highscore', 'w') as f:
+                f.write(str(self.high_score))
+        except:
+            pass
     
     def update_scrolltext(self):
         scrolltext_hs = scrolltext.replace('[HS]', str(self.high_score))
         self.scroll_text = self.scroll_font.render(scrolltext_hs, True, LESSBLACK)
-        self.scroll_rect = self.scroll_text.get_rect(left=GAME_W, top=GAME_H - OFFSET - round(FONT_SIZE))
+        self.scroll_rect = self.scroll_text.get_rect(left=GAME_W, top=GAME_H - OFFSET - FONT_SIZE)
         
         
     def draw(self):
+        pygame.draw.rect(GAME_SURFACE, BLACK, (OFFSET - 4, TOP_OFFSET + OFFSET - 4, CELL_SIZE * NUM_OF_CELLS_WIDTH + 8, CELL_SIZE * NUM_OF_CELLS_HEIGHT + 8), 5)
+        pygame.draw.line(GAME_SURFACE, BLACK, (OFFSET - 4, TOP_OFFSET + OFFSET - 14), (OFFSET + 4 + CELL_SIZE * NUM_OF_CELLS_WIDTH, TOP_OFFSET + OFFSET - 14), 5)
         self.snake.draw()
         self.food.draw()
         self.animal.draw(self.active_timer)
@@ -432,13 +462,14 @@ class Game:
         self.food_counter = 0
         self.num_of_frames = 0
         self.active_timer = False
-        self.animal.image = self.animal.create_random_image()
-        self.animal.bigimage =  scale(self.animal.image, (round(CELL_SIZE*1.5), round(CELL_SIZE*1.5)))
+        self.animal.create_random_image(self.score > BONUS_ANIMALS_AFTER_SCORE)
 
     def check_collision_with_animal(self):
         if self.snake.body[0] == self.animal.position and self.active_timer:
             self.snake.body_foods[0] = 1
             self.snake.eat_sound.play()
+            if self.animal.phone_animal:
+                self.snake.eat_phone_sound.play()
             self.animal.position = self.animal.create_random_pos(self.snake.body, self.food.position)
             self.snake.add_block = True
             self.score += 40
@@ -465,8 +496,10 @@ class Game:
             self.snake.highscore_sound.play()
             self.high_score = self.score
             self.save_highscore()
+            self.gameover_text = '-+* HIGH SCORE! *+-'
         else:
             self.snake.gameover_sound.play()
+            self.gameover_text = 'GAME OVER'
             
         self.status = "GAME_OVER"
         pygame.time.set_timer(EV_GAME_OVER_TIMEOUT, GAMEOVER_TIMEOUT_MS)
@@ -474,6 +507,7 @@ class Game:
         self.input_active = False
 
     def play(self):
+        self.gameover_text = ''
         self.snake.reset()
         self.food.position = self.food.create_random_pos(self.snake.body)
         self.score = 0
@@ -544,7 +578,7 @@ class Game:
             if self.status == 'PRE_GAME':
                 # title screen
                 GAME_SURFACE.fill(TRUEGREEN)
-                GAME_SURFACE.blit(titleimage, (GAME_W/2 - titleimage.get_width()/2, GAME_H/2 - titleimage.get_height()/2))
+                GAME_SURFACE.blit(titleimage, ((GAME_W - titleimage.get_width()) // 2, (GAME_H - titleimage.get_height()) // 2))
                 
                 # scrolltext
                 self.scroll_rect.x -= SCROLLTEXT_SPEED
@@ -563,11 +597,15 @@ class Game:
                 # old surface omage is left under it to fade away slowly
                 GAME_SURFACE.blit(ghost_cover, (0, 0))
             
-                pygame.draw.rect(GAME_SURFACE, BLACK, (OFFSET - 4, TOP_OFFSET + OFFSET - 4, CELL_SIZE * NUM_OF_CELLS_WIDTH + 8, CELL_SIZE * NUM_OF_CELLS_HEIGHT + 8), 5)
-                pygame.draw.line(GAME_SURFACE, BLACK, (OFFSET - 4, TOP_OFFSET + OFFSET - 14), (OFFSET + 4 + CELL_SIZE * NUM_OF_CELLS_WIDTH, TOP_OFFSET + OFFSET - 14), 5)
                 self.draw()
-                score_surface = self.score_font.render("{:04d}".format(self.score), True, BLACK)
+                score_text = "{:04d}".format(self.score)
+                score_surface = self.score_font.render(score_text, True, BLACK)
                 GAME_SURFACE.blit(score_surface, (OFFSET - 4, OFFSET - 60 + 42))
+                
+                if self.status == 'GAME_OVER':
+                    go_surf = self.scroll_font.render(self.gameover_text, True, BLACK);
+                    go_rect = go_surf.get_rect()
+                    GAME_SURFACE.blit(go_surf, ( (GAME_W-go_rect.right)//2, OFFSET - 60 + 42 + 5))
 
                 if self.active_timer:
                     total_seconds = 9 - (self.num_of_frames // FRAME_RATE)
@@ -584,11 +622,11 @@ class Game:
             WIN_W, WIN_H = MAIN_SCREEN.get_size()
             
             # game surface to middle of the screen
-            MAIN_SCREEN.blit(GAME_SURFACE, (OFFSET_X - (1920-WIN_W)/2, OFFSET_Y - (1080-WIN_H)/2))
+            MAIN_SCREEN.blit(GAME_SURFACE, (OFFSET_X - (1920-WIN_W)//2, OFFSET_Y - (1080-WIN_H)//2))
             
             # overlay
             if overlay:
-                MAIN_SCREEN.blit(overlay, (-(1920-WIN_W)/2, -(1080-WIN_H)/2))
+                MAIN_SCREEN.blit(overlay, (-(1920-WIN_W)//2, -(1080-WIN_H)//2))
 
 
 
