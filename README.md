@@ -60,7 +60,7 @@ Click on any image to view it in full resolution.
 
 ## Retro Surprise
 
-Once you reach 500 points, you may see a retro surprise.
+Once you reach 500 points and more, you may see a retro surprise.
 
 ## Installation & Running
 
