@@ -247,8 +247,9 @@ class Joystick:
 
 
 class Snake:
-    def __init__(self):
+    def __init__(self, thegame):
         self.body = []
+        self.thegame = thegame
         self.body_directions = []
         self.body_foods = []
         self.direction = Vector2(-1, -1)
@@ -274,6 +275,10 @@ class Snake:
     def get_block_image(self, index):
         pre = 'f' if self.body_foods[index] else ''
         if index == 0:
+            next_position = self.body[0] + self.direction
+            # is food in next position? if, open the mouth
+            if self.thegame.check_position_for_food(next_position):
+                pre = 'f'
             return FORMAT_IMAGES[pre+"head_" + self.get_direction_name()]
         else:
             direction = self.body_directions[index]
@@ -380,7 +385,7 @@ class Animal:
 class Game:
     def __init__(self):
         self.clock = pygame.time.Clock()
-        self.snake = Snake()
+        self.snake = Snake(self)
         self.food = Food(self.snake.body)
         #self.status = "PLAYING"
         self.status = "PRE_GAME"
@@ -463,6 +468,12 @@ class Game:
         self.num_of_frames = 0
         self.active_timer = False
         self.animal.create_random_image(self.score > BONUS_ANIMALS_AFTER_SCORE)
+
+    def check_position_for_food(self, position):
+        if (self.active_timer and position == self.animal.position) or position == self.food.position:
+            return True
+        else:
+            return False
 
     def check_collision_with_animal(self):
         if self.snake.body[0] == self.animal.position and self.active_timer:
