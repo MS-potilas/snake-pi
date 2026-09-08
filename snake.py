@@ -9,6 +9,8 @@ from pygame.transform import flip, rotate, scale
 # Snake Pi modifications by MS-potilas 2026
 # Snake Pi made for RetroPie, but can be run also without it.
 
+# name of the game for old style title screen
+oldtitle = "Snake Pi"
 
 # FPS
 FRAME_RATE = 30                     # more authentic than 60 fps?
@@ -26,7 +28,7 @@ BLACK = (0x1f, 0x22, 0x18)          # greenish LCD-black
 LESSBLACK = (0x30, 0x35, 0x2A)      # something semi-odd for scrolltext
 
 ANIMAL_FREQUENCY = 5                # normally 5
-BONUS_ANIMALS_AFTER_SCORE = 500     # normally 500
+RETRO_BONUS_AFTER_SCORE = 500       # normally 500
 
 MOBILE_PHONE_ANIMAL_INDEX = 10      # eating this plays nokia tune
 
@@ -42,16 +44,56 @@ CELL_SIZE = 22                      # 22 compatible with both overlays
 NUM_OF_CELLS_WIDTH = 29
 NUM_OF_CELLS_HEIGHT = 19
 
+# FLAG: original (old / first) Snake game (oldsnake = True), or newer Snake II (oldsnake = False)
+# cmdline:  --old               : sets oldsnake True
+#           --oldrandom         : includes old snake in random game and overlay selection
+#                                 probability to get old tyle game is 20%
+oldsnake = False
+
+
+tunename = random.choice(glob.glob('sounds/nokia_tune*.wav'))
+
 cmdline = " " + (" ".join(sys.argv)) + " "
+
+if "--oldrandom " in cmdline:
+    if random.randint(1, 5) == 1:       # old snake probability 20%
+        oldsnake = True
 
 if "--7110 " in cmdline:
     casename = 'images/nokia_case7110.png'
+    oldsnake = False
 elif "--3310 " in cmdline:
     casename = 'images/nokia_case3310.png'
+    oldsnake = False
 elif "--nocase " in cmdline:
     casename = ''
+elif "--6110 " in cmdline:
+    casename = 'images/nokia_oldcase6110.png'
+    oldsnake = True
+elif "--5110 " in cmdline:
+    casename = 'images/nokia_oldcase5110.png'
+    oldsnake = True
 else:
     casename = random.choice(glob.glob('images/nokia_case*.png'))
+
+if "--old " in cmdline or oldsnake:
+    oldsnake = True
+    ANIMAL_FREQUENCY = 0                # no animals on first Snake
+    NUM_OF_CELLS_WIDTH = 20
+    NUM_OF_CELLS_HEIGHT = 13
+    CELL_SIZE = 12                      # smaller cells
+    TOP_OFFSET = 0                      # no score! no this is 0
+    GREEN = (0x8d, 0xbd, 0x8d)          # different greens
+    TRUEGREEN = (0x8d, 0xbd, 0x8d)  
+    GAMEOVER_TIMEOUT_MS = 60000         # no rush to get to title screen
+    tunename = 'sounds/nokia_tune.wav'  # no fancy stuff
+    SNAKE_UPDATE_MS = 200
+
+    RETRO_BONUS_AFTER_SCORE = 50 * 7    # after 50 orbs, otherwise too hard, not fun!
+    
+    # if no old nokia case overlay is selected, select one from the old case overlays
+    if casename != '' and not 'oldcase' in casename:
+        casename = random.choice(glob.glob('images/nokia_oldcase*.png'))
 
 # 7110 play field
 if '7110' in casename:
@@ -59,11 +101,15 @@ if '7110' in casename:
     NUM_OF_CELLS_WIDTH = 26
     NUM_OF_CELLS_HEIGHT = 21
 
-# play field when no overlay
+# play field is different, when no overlay (oxcept in old snake game)
 if casename == '':
-    NUM_OF_CELLS_WIDTH = 30
-    NUM_OF_CELLS_HEIGHT = 20
-    
+    if not oldsnake:
+        NUM_OF_CELLS_WIDTH = 30
+        NUM_OF_CELLS_HEIGHT = 20
+    else:
+        CELL_SIZE = 18
+        FONT_SIZE = 50          # title screen font
+        SCROLL_FONT_SIZE = 32   # game over font
 
 # game area size
 GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
@@ -153,41 +199,59 @@ GAME_SURFACE = pygame.Surface((GAME_W, GAME_H))
 
 IMG_NAMES = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6", "animal7", "animal8", "animal9", "animal10"]
 IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)).convert_alpha() for name in IMG_NAMES}
+
+if oldsnake:
+    IMAGES['head'] = snakeimg = pygame.image.load("images/oldbody.png").convert_alpha()
+    IMAGES['food'] = pygame.image.load("images/oldfood.png").convert_alpha()
+   
 FORMAT_IMAGES = {
     "food": scale(IMAGES["food"], (CELL_SIZE, CELL_SIZE)),
     "head_R": scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)),
-    "head_L": flip(scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "head_U": rotate(scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)), 90),
-    "head_D": flip(rotate(scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)), 270), True, False),
+    "head_L": scale(flip(IMAGES["head"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "head_U": scale(rotate(IMAGES["head"], 90), (CELL_SIZE, CELL_SIZE)),
+    "head_D": scale(flip(rotate(IMAGES["head"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
     "body_R": scale(IMAGES["body"], (CELL_SIZE, CELL_SIZE)),
-    "body_L": flip(scale(IMAGES["body"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "body_U": rotate(scale(IMAGES["body"], (CELL_SIZE, CELL_SIZE)), 90),
-    "body_D": flip(rotate(scale(IMAGES["body"], (CELL_SIZE, CELL_SIZE)), 270), True, False),
+    "body_L": scale(flip(IMAGES["body"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "body_U": scale(rotate(IMAGES["body"], 90), (CELL_SIZE, CELL_SIZE)),
+    "body_D": scale(flip(rotate(IMAGES["body"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
     "tail_R": scale(IMAGES["tail"], (CELL_SIZE, CELL_SIZE)),
-    "tail_L": flip(scale(IMAGES["tail"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "tail_U": rotate(scale(IMAGES["tail"], (CELL_SIZE, CELL_SIZE)), 90),
-    "tail_D": flip(rotate(scale(IMAGES["tail"], (CELL_SIZE, CELL_SIZE)), 270), True, False),
+    "tail_L": scale(flip(IMAGES["tail"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "tail_U": scale(rotate(IMAGES["tail"], 90), (CELL_SIZE, CELL_SIZE)),
+    "tail_D": scale(flip(rotate(IMAGES["tail"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
     "turn_R": scale(IMAGES["turn"], (CELL_SIZE, CELL_SIZE)),
-    "turn_L": flip(scale(IMAGES["turn"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "turn_U": rotate(scale(IMAGES["turn"], (CELL_SIZE, CELL_SIZE)), 90),
-    "turn_D": rotate(scale(IMAGES["turn"], (CELL_SIZE, CELL_SIZE)), 180),
+    "turn_L": scale(flip(IMAGES["turn"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "turn_U": scale(rotate(IMAGES["turn"], 90), (CELL_SIZE, CELL_SIZE)),
+    "turn_D": scale(rotate(IMAGES["turn"], 180), (CELL_SIZE, CELL_SIZE)),
     "fhead_R": scale(IMAGES["fhead"], (CELL_SIZE, CELL_SIZE)),
-    "fhead_L": flip(scale(IMAGES["fhead"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "fhead_U": rotate(scale(IMAGES["fhead"], (CELL_SIZE, CELL_SIZE)), 90),
-    "fhead_D": flip(rotate(scale(IMAGES["fhead"], (CELL_SIZE, CELL_SIZE)), 270), True, False),
+    "fhead_L": scale(flip(IMAGES["fhead"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "fhead_U": scale(rotate(IMAGES["fhead"], 90), (CELL_SIZE, CELL_SIZE)),
+    "fhead_D": scale(flip(rotate(IMAGES["fhead"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
     "fbody_R": scale(IMAGES["fbody"], (CELL_SIZE, CELL_SIZE)),
-    "fbody_L": flip(scale(IMAGES["fbody"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "fbody_U": rotate(scale(IMAGES["fbody"], (CELL_SIZE, CELL_SIZE)), 90),
-    "fbody_D": flip(rotate(scale(IMAGES["fbody"], (CELL_SIZE, CELL_SIZE)), 270), True, False),
+    "fbody_L": scale(flip(IMAGES["fbody"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "fbody_U": scale(rotate(IMAGES["fbody"], 90), (CELL_SIZE, CELL_SIZE)),
+    "fbody_D": scale(flip(rotate(IMAGES["fbody"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
     "ftail_R": scale(IMAGES["ftail"], (CELL_SIZE, CELL_SIZE)),
-    "ftail_L": flip(scale(IMAGES["ftail"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "ftail_U": rotate(scale(IMAGES["ftail"], (CELL_SIZE, CELL_SIZE)), 90),
-    "ftail_D": flip(rotate(scale(IMAGES["ftail"], (CELL_SIZE, CELL_SIZE)), 270), True, False),
+    "ftail_L": scale(flip(IMAGES["ftail"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "ftail_U": scale(rotate(IMAGES["ftail"], 90), (CELL_SIZE, CELL_SIZE)),
+    "ftail_D": scale(flip(rotate(IMAGES["ftail"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
     "fturn_R": scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)),
-    "fturn_L": flip(scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)), True, False),
-    "fturn_U": rotate(scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)), 90),
-    "fturn_D": rotate(scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)), 180),
+    "fturn_L": scale(flip(IMAGES["fturn"], True, False), (CELL_SIZE, CELL_SIZE)),
+    "fturn_U": scale(rotate(IMAGES["fturn"], 90), (CELL_SIZE, CELL_SIZE)),
+    "fturn_D": scale(rotate(IMAGES["fturn"], 180), (CELL_SIZE, CELL_SIZE)),
 }
+
+if oldsnake:
+    # in old snake, all snake parts are the same, without flips or rotations!
+    lst = ["head_R", "head_L", "head_U", "head_D",
+           "body_R", "body_L", "body_U", "body_D",
+           "turn_R", "turn_L", "turn_U", "turn_D",
+           "tail_R", "tail_L", "tail_U", "tail_D",
+           "fhead_R", "fhead_L", "fhead_U", "fhead_D",
+           "fbody_R", "fbody_L", "fbody_U", "fbody_D",
+           "fturn_R", "fturn_L", "fturn_U", "fturn_D",
+           "ftail_R", "ftail_L", "ftail_U", "ftail_D"]
+    for i in lst:
+        FORMAT_IMAGES[i] = FORMAT_IMAGES['head_R']
 
 # User events
 EV_SNAKE_UPDATE = pygame.USEREVENT + 1
@@ -275,7 +339,7 @@ class Snake:
     def get_block_image(self, index):
         pre = 'f' if self.body_foods[index] else ''
         if index == 0:
-            next_position = self.body[0] + self.direction
+            next_position = self.body[0] + self.current_direction
             # is food in next position? if, open the mouth
             if self.thegame.check_position_for_food(next_position):
                 pre = 'f'
@@ -319,7 +383,8 @@ class Snake:
 
 
     def reset(self):
-        self.body = [Vector2(5, 12), Vector2(4, 12), Vector2(3, 12)]
+        y = NUM_OF_CELLS_HEIGHT // 2 - 2 
+        self.body = [Vector2(5, y), Vector2(4, y), Vector2(3, y)]
         self.body_directions = ["R", "R", "R"]
         self.body_foods = [0, 0, 0]
         self.direction = Vector2(1, 0)
@@ -329,9 +394,13 @@ class Snake:
 class Food:
     def __init__(self, snake_body):
         self.position = self.create_random_pos(snake_body)
+        self.superfood = False
 
     def draw(self):
-        food_surface = FORMAT_IMAGES["food"]
+        if not self.superfood:
+            food_surface = FORMAT_IMAGES["food"]
+        else:
+            food_surface = scale(IMAGES["animal9"], (CELL_SIZE, CELL_SIZE))
         food_rect = pygame.Rect(OFFSET + self.position.x * CELL_SIZE, TOP_OFFSET + OFFSET + self.position.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
         GAME_SURFACE.blit(food_surface, food_rect)
 
@@ -383,11 +452,11 @@ class Animal:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, oldsnake):
         self.clock = pygame.time.Clock()
         self.snake = Snake(self)
         self.food = Food(self.snake.body)
-        #self.status = "PLAYING"
+        self.oldsnake = oldsnake
         self.status = "PRE_GAME"
         self.score = 0
         self.food_counter = 0
@@ -396,7 +465,6 @@ class Game:
         self.animal = Animal(self.snake.body, self.food.position, self.active_timer)
         self.joysticks = Joystick()
         # select random nokia tune for title screen
-        tunename = random.choice(glob.glob('sounds/nokia_tune*.wav'))
         self.nokia_tune = pygame.mixer.Sound(tunename)
         self.score_font = pygame.font.Font("fonts/nokiafc22.ttf", FONT_SIZE)
         self.input_active = True
@@ -431,8 +499,10 @@ class Game:
         
         
     def draw(self):
-        pygame.draw.rect(GAME_SURFACE, BLACK, (OFFSET - 4, TOP_OFFSET + OFFSET - 4, CELL_SIZE * NUM_OF_CELLS_WIDTH + 8, CELL_SIZE * NUM_OF_CELLS_HEIGHT + 8), 5)
-        pygame.draw.line(GAME_SURFACE, BLACK, (OFFSET - 4, TOP_OFFSET + OFFSET - 14), (OFFSET + 4 + CELL_SIZE * NUM_OF_CELLS_WIDTH, TOP_OFFSET + OFFSET - 14), 5)
+        width = 3 if self.oldsnake else 5
+        pygame.draw.rect(GAME_SURFACE, BLACK, (OFFSET - 5, TOP_OFFSET + OFFSET - 5, CELL_SIZE * NUM_OF_CELLS_WIDTH + 10, CELL_SIZE * NUM_OF_CELLS_HEIGHT + 10), width)
+        if not self.oldsnake:
+            pygame.draw.line(GAME_SURFACE, BLACK, (OFFSET - 5, TOP_OFFSET + OFFSET - 15), (OFFSET + 5 + CELL_SIZE * NUM_OF_CELLS_WIDTH, TOP_OFFSET + OFFSET - 15), width)
         self.snake.draw()
         self.food.draw()
         self.animal.draw(self.active_timer)
@@ -449,7 +519,7 @@ class Game:
     def update_food_counter(self):
         if not self.active_timer:
             self.food_counter += 1
-            if self.food_counter >= ANIMAL_FREQUENCY: 
+            if ANIMAL_FREQUENCY and self.food_counter >= ANIMAL_FREQUENCY: 
                 # new random position, because snake and food have moved
                 self.animal.position = self.animal.create_random_pos(self.snake.body, self.food.position)
                 self.active_timer = True
@@ -462,12 +532,15 @@ class Game:
             self.snake.add_block = True
             self.score += 7
             self.update_food_counter()
+            # different retro bonus in old snake
+            if self.oldsnake and self.score > RETRO_BONUS_AFTER_SCORE:
+                self.food.superfood = True
 
     def reset_timer(self):
         self.food_counter = 0
         self.num_of_frames = 0
         self.active_timer = False
-        self.animal.create_random_image(self.score > BONUS_ANIMALS_AFTER_SCORE)
+        self.animal.create_random_image(self.score > RETRO_BONUS_AFTER_SCORE)
 
     def check_position_for_food(self, position):
         if (self.active_timer and position == self.animal.position) or position == self.food.position:
@@ -503,14 +576,14 @@ class Game:
         self.snake.body_directions.pop(0)
         self.snake.body_foods.pop(0)
         
-        if self.score > self.high_score:
+        if self.score > self.high_score and not self.oldsnake:
             self.snake.highscore_sound.play()
             self.high_score = self.score
             self.save_highscore()
             self.gameover_text = '-+* HIGH SCORE! *+-'
         else:
             self.snake.gameover_sound.play()
-            self.gameover_text = 'GAME OVER'
+            self.gameover_text = ' GAME OVER '
             
         self.status = "GAME_OVER"
         pygame.time.set_timer(EV_GAME_OVER_TIMEOUT, GAMEOVER_TIMEOUT_MS)
@@ -518,6 +591,7 @@ class Game:
         self.input_active = False
 
     def play(self):
+        self.food.superfood = False
         self.gameover_text = ''
         self.snake.reset()
         self.food.position = self.food.create_random_pos(self.snake.body)
@@ -589,13 +663,18 @@ class Game:
             if self.status == 'PRE_GAME':
                 # title screen
                 GAME_SURFACE.fill(TRUEGREEN)
-                GAME_SURFACE.blit(titleimage, ((GAME_W - titleimage.get_width()) // 2, (GAME_H - titleimage.get_height()) // 2))
+                if self.oldsnake:
+                    go_surf = self.score_font.render(oldtitle, True, BLACK);
+                    go_rect = go_surf.get_rect()
+                    GAME_SURFACE.blit(go_surf, ((GAME_W - go_rect.width) // 2, (GAME_H - go_rect.height) // 2))
+                else:
+                    GAME_SURFACE.blit(titleimage, ((GAME_W - titleimage.get_width()) // 2, (GAME_H - titleimage.get_height()) // 2))
                 
-                # scrolltext
-                self.scroll_rect.x -= SCROLLTEXT_SPEED
-                if self.scroll_rect.right <= 0:           # if scrolled to end
-                    self.scroll_rect.x = GAME_W*2         # then move to right side
-                GAME_SURFACE.blit(self.scroll_text, self.scroll_rect)
+                    # scrolltext
+                    self.scroll_rect.x -= SCROLLTEXT_SPEED
+                    if self.scroll_rect.right <= 0:           # if scrolled to end
+                        self.scroll_rect.x = GAME_W*2         # then move to right side
+                    GAME_SURFACE.blit(self.scroll_text, self.scroll_rect)
                 
             else:
                 # temporary surface for lcd ghosting effect
@@ -609,14 +688,23 @@ class Game:
                 GAME_SURFACE.blit(ghost_cover, (0, 0))
             
                 self.draw()
-                score_text = "{:04d}".format(self.score)
-                score_surface = self.score_font.render(score_text, True, BLACK)
-                GAME_SURFACE.blit(score_surface, (OFFSET - 4, OFFSET - 60 + 42))
+                if not self.oldsnake:
+                    score_text = "{:04d}".format(self.score)
+                    score_surface = self.score_font.render(score_text, True, BLACK)
+                    GAME_SURFACE.blit(score_surface, (OFFSET - 4, OFFSET - 60 + 42))
                 
                 if self.status == 'GAME_OVER':
                     go_surf = self.scroll_font.render(self.gameover_text, True, BLACK);
+                    if self.oldsnake:
+                        temp_surface = pygame.Surface(go_surf.get_size())
+                        temp_surface.fill(GREEN)
+                        temp_surface.blit(go_surf, (0, 0))
+                        go_surf.blit(temp_surface, (0, 0))
                     go_rect = go_surf.get_rect()
-                    GAME_SURFACE.blit(go_surf, ( (GAME_W-go_rect.right)//2, OFFSET - 60 + 42 + 5))
+                    y = OFFSET - 60 + 42 + 5
+                    if self.oldsnake:
+                        y = (GAME_H - SCROLL_FONT_SIZE) // 2
+                    GAME_SURFACE.blit(go_surf, ( (GAME_W-go_rect.right)//2, y))
 
                 if self.active_timer:
                     total_seconds = 9 - (self.num_of_frames // FRAME_RATE)
@@ -650,7 +738,7 @@ class Game:
 
 if __name__ == '__main__':
     try:
-        game = Game()
+        game = Game(oldsnake)
         game.run()
     except KeyboardInterrupt:
         game.QUIT()
