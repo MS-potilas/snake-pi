@@ -50,6 +50,10 @@ NUM_OF_CELLS_HEIGHT = 19
 #                                 probability to get old tyle game is 20%
 oldsnake = False
 
+# change working dir to same as the script's
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
 
 tunename = random.choice(glob.glob('sounds/nokia_tune*.wav'))
 
@@ -174,11 +178,6 @@ else:
 
 
 pygame.key.set_repeat(50, SNAKE_UPDATE_MS)
-
-# change working dir to same as the script's
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
 
 overlay = None
 try:
