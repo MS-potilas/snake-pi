@@ -476,6 +476,7 @@ class Game:
         self.scroll_text = None
         self.scroll_rect = None
         self.update_scrolltext()
+        self.removeghosttime = pygame.time.get_ticks()
     
     def load_highscore(self):
         try:
@@ -598,6 +599,7 @@ class Game:
         self.status = "PLAYING"
         self.reset_timer()
 
+
     def QUIT(self):
         pygame.quit()
         sys.exit()
@@ -677,14 +679,21 @@ class Game:
                 
             else:
                 # temporary surface for lcd ghosting effect
-                ghost_cover = pygame.Surface((GAME_W, GAME_H))
-                ghost_cover.fill(GREEN) 
-                # opacity (Alpha: 0 = fully transparent, 255 = opaque)
-                ghost_cover.set_alpha(176)    # under 100 left permanent ghost marks
+                
+                # a hack to remove ghosting trails every 1000-2500 ms
+                ticks = pygame.time.get_ticks()
+                if ticks > self.removeghosttime:
+                    self.removeghosttime =  ticks + random.randint(1000,2500)
+                    GAME_SURFACE.fill(TRUEGREEN)
+                else:
+                    ghost_cover = pygame.Surface((GAME_W, GAME_H))
+                    ghost_cover.fill(GREEN) 
+                    # opacity (Alpha: 0 = fully transparent, 255 = opaque)
+                    ghost_cover.set_alpha(192)    # under 100 left permanent ghost trails
 
-                # put semi-transparent surface onto game surface
-                # old surface omage is left under it to fade away slowly
-                GAME_SURFACE.blit(ghost_cover, (0, 0))
+                    # put semi-transparent surface onto game surface
+                    # old surface omage is left under it to fade away slowly
+                    GAME_SURFACE.blit(ghost_cover, (0, 0))
             
                 self.draw()
                 if not self.oldsnake:
