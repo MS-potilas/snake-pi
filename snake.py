@@ -88,7 +88,7 @@ if "--old " in cmdline or oldsnake:
     CELL_SIZE = 12                      # smaller cells
     TOP_OFFSET = 0                      # no score! no this is 0
     GREEN = (0x8d, 0xbd, 0x8d)          # different greens
-    TRUEGREEN = (0x8d, 0xbd, 0x8d)  
+    TRUEGREEN = (0x80, 0xb0, 0x82)  
     GAMEOVER_TIMEOUT_MS = 60000         # no rush to get to title screen
     tunename = 'sounds/nokia_tune.wav'  # no fancy stuff
     SNAKE_UPDATE_MS = 200
@@ -99,9 +99,9 @@ if "--old " in cmdline or oldsnake:
     if casename != '' and not 'oldcase' in casename:
         casename = random.choice(glob.glob('images/nokia_oldcase*.png'))
 
-# 7110 play field
+
 if '7110' in casename:
-    # same area as with 3310 works, but this is more optimized:
+    # 7110-optimized play field 
     NUM_OF_CELLS_WIDTH = 26
     NUM_OF_CELLS_HEIGHT = 21
 
@@ -476,7 +476,9 @@ class Game:
         self.scroll_text = None
         self.scroll_rect = None
         self.update_scrolltext()
-        self.removeghosttime = pygame.time.get_ticks()
+        
+        self.ghost_layer = pygame.Surface((GAME_W, GAME_H))
+        self.ghost_layer.fill(TRUEGREEN)
     
     def load_highscore(self):
         try:
@@ -583,7 +585,7 @@ class Game:
             self.gameover_text = '-+* HIGH SCORE! *+-'
         else:
             self.snake.gameover_sound.play()
-            self.gameover_text = ' GAME OVER '
+            self.gameover_text = 'GAME OVER'
             
         self.status = "GAME_OVER"
         pygame.time.set_timer(EV_GAME_OVER_TIMEOUT, GAMEOVER_TIMEOUT_MS)
@@ -603,7 +605,6 @@ class Game:
     def QUIT(self):
         pygame.quit()
         sys.exit()
-        
 
 
     def run(self):
@@ -676,25 +677,24 @@ class Game:
                     if self.scroll_rect.right <= 0:           # if scrolled to end
                         self.scroll_rect.x = GAME_W*2         # then move to right side
                     GAME_SURFACE.blit(self.scroll_text, self.scroll_rect)
-                
             else:
-                # temporary surface for lcd ghosting effect
-                
-                # a hack to remove ghosting trails every 1000-2500 ms
-                ticks = pygame.time.get_ticks()
-                if ticks > self.removeghosttime:
-                    self.removeghosttime =  ticks + random.randint(1000,2500)
-                    GAME_SURFACE.fill(TRUEGREEN)
-                else:
-                    ghost_cover = pygame.Surface((GAME_W, GAME_H))
-                    ghost_cover.fill(GREEN) 
-                    # opacity (Alpha: 0 = fully transparent, 255 = opaque)
-                    ghost_cover.set_alpha(192)    # under 100 left permanent ghost trails
+                # lcd ghosting effect. get game surface
+                self.ghost_layer.blit(GAME_SURFACE, (0, 0))
 
-                    # put semi-transparent surface onto game surface
-                    # old surface omage is left under it to fade away slowly
-                    GAME_SURFACE.blit(ghost_cover, (0, 0))
-            
+                # fade-out using temporary surface
+                ghost_cover = pygame.Surface((GAME_W, GAME_H))
+                ghost_cover.fill(GREEN)
+                ghost_cover.set_alpha(128)
+
+                self.ghost_layer.blit(ghost_cover, (0, 0))
+
+                # emoty game surface
+                GAME_SURFACE.fill(TRUEGREEN)
+
+                # add ghost layer on top
+                GAME_SURFACE.blit(self.ghost_layer, (0, 0))
+                    
+                # then the rest of the drawing
                 self.draw()
                 if not self.oldsnake:
                     score_text = "{:04d}".format(self.score)
@@ -705,7 +705,7 @@ class Game:
                     go_surf = self.scroll_font.render(self.gameover_text, True, BLACK);
                     if self.oldsnake:
                         temp_surface = pygame.Surface(go_surf.get_size())
-                        temp_surface.fill(GREEN)
+                        temp_surface.fill(TRUEGREEN)
                         temp_surface.blit(go_surf, (0, 0))
                         go_surf.blit(temp_surface, (0, 0))
                     go_rect = go_surf.get_rect()
@@ -734,8 +734,6 @@ class Game:
             # overlay
             if overlay:
                 MAIN_SCREEN.blit(overlay, (-(1920-WIN_W)//2, -(1080-WIN_H)//2))
-
-
 
             # update display
             pygame.display.flip()
