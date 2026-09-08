@@ -178,14 +178,16 @@ developer:   MS-potilas
 publisher:   Public Domain
 ```
 
-**Optional descriptions depending on your setup:**
+**Optional descriptions and images depending on your setup:**
 
 *   **For the Original Snake I launcher (`--old`):**
     > "Snake Pi is a retro-style clone of the classic Snake game included in phones such as the Nokia 6110 and Nokia 5110. Collect as much food as possible while avoiding walls and your own tail."
+    
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/5110_game.jpg`
 
 *   **For the combined launcher (`--oldrandom`):**
     > "Snake Pi is a retro-styled clone of the classic Snake and Snake II games included in old Nokia phones. Collect as much food as possible while avoiding walls and your own tail."
+    
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/snake_collage.jpg`
 
 
