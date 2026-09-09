@@ -6,7 +6,7 @@
 
 ## About
 
-**Snake Pi** is a modern, retro-styled clone of the classic **Nokia Snake II** game. It features nostalgic Nokia 7110 and 3310 phone overlays and joystick support. 
+**Snake Pi** is a modern, retro-styled clone of the classic **Nokia Snake II** game. It features nostalgic Nokia phone overlays and joystick support. 
 
 While specifically optimized to run on **RetroPie**, it can also be played on any standard desktop environment (Linux, macOS, Windows). 
 
@@ -18,7 +18,7 @@ You can control the snake using a keyboard or a controller/joystick:
 
 *   **Arrow Keys:** Move up, down, left, or right
 *   **Numpad (2, 4, 6, 8):** Traditional Nokia-style movement
-*   **Joystick / D-Pad:** Full analog or digital controller support for RetroPie setups
+*   **N / O:** Switch to **n**ext **o**verlay (3310 / 5110 / 6110 / 7110) and game style (Snake / Snake II)
 *   **Esc / Q:** Quit the game
 
 ## Original Snake (not II)
@@ -122,15 +122,15 @@ sudo apt install python3-pygame
 
 | Option | Description |
 | :--- | :--- |
-| `--fullscreen` | Opens the game in full-screen mode (implied when run outside a windowing system). |
-| `--windowed` | Opens the game in a window (implied when run under a windowing system). |
+| `‑‑fullscreen` | Opens the game in full-screen mode (implied when run outside a windowing system). |
+| `‑‑windowed` | Opens the game in a window (implied when run under a windowing system). |
 | `--7110` | Uses the Nokia 7110 overlay (Snake II). |
 | `--3310` | Uses the Nokia 3310 overlay (Snake II). |
 | `--6110` | Uses the Nokia 6110 overlay with original Snake gameplay (implies `--old`). |
 | `--5110` | Uses the Nokia 5110 overlay with original Snake gameplay (implies `--old`). |
 | `--nocase` | Runs the game in a window without any phone overlay. |
 | `--old` | Opens the original Snake gameplay with a randomly chosen overlay (unless `--nocase` is used). |
-| `--oldrandom` | Includes the original Snake gameplay in the random overlay selection with a 20% probability. |
+| `‑‑oldrandom` | Includes the original Snake gameplay in the random overlay selection with a 20% probability. |
 
 ### RetroPie Installation (Ports menu)
 
@@ -162,6 +162,8 @@ To add Snake Pi to your RetroPie **Ports** menu so it can be launched directly f
 The instructions above create a launcher for the default Snake II style game. If you wish to include the original Snake game with the Nokia 5110/6110 overlays, you can add the `--oldrandom` flag to the script. 
 
 Alternatively, if you want a separate menu entry for the older game style, you can create a second launch script (for example, `Snake_Pi_I.sh`) and add the `--old` flag to the python command.
+
+Once you have launched the game, you can use N or O key to swith to next overlay and game style, according to command line options. If `--old` is used, it switches between Nokia 5110 and 6110 overlays. If `--oldrandom` is used, it switches between all overlays (Nokia 3310, 5110, 6110, and 7110). If neither `--old` nor `--oldrandom` is used, it switches between Nokia 3310 and 7110 overlays. If `--nocase` is used, it switches between Snake and Snake II gameplay.
 
 #### EmulationStation Gamelist Entry
 

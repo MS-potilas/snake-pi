@@ -12,13 +12,17 @@ from pygame.transform import flip, rotate, scale
 # name of the game for old style title screen
 oldtitle = "Snake Pi"
 
+cmdline = " " + (" ".join(sys.argv)) + " "
+cmdline = cmdline.replace('‑', '-')  # non-breaking hyphen to hyphen
+
+
 # FPS
 FRAME_RATE = 30                     # more authentic than 60 fps?
 
 # timeouts etc
 SNAKE_UPDATE_MS = 180
-ENABLE_INPUT_AFTER_GAMEOVER_MS = 3000
 GAMEOVER_TIMEOUT_MS = 12000
+ENABLE_INPUT_AFTER_GAMEOVER_MS = 3000
 PLAY_TITLE_MUSIC_AFTER_MS = 500
 
 # Colors (R, G, B)
@@ -44,115 +48,50 @@ CELL_SIZE = 22                      # 22 compatible with both overlays
 NUM_OF_CELLS_WIDTH = 29
 NUM_OF_CELLS_HEIGHT = 19
 
-# FLAG: original (old / first) Snake game (oldsnake = True), or newer Snake II (oldsnake = False)
-# cmdline:  --old               : sets oldsnake True
-#           --oldrandom         : includes old snake in random game and overlay selection
-#                                 probability to get old tyle game is 20%
-oldsnake = False
-
-# change working dir to same as the script's
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
-
-tunename = random.choice(glob.glob('sounds/nokia_tune*.wav'))
-
-cmdline = " " + (" ".join(sys.argv)) + " "
-
-if "--oldrandom " in cmdline:
-    if random.randint(1, 5) == 1:       # old snake probability 20%
-        oldsnake = True
-
-if "--7110 " in cmdline:
-    casename = 'images/nokia_case7110.png'
-    oldsnake = False
-elif "--3310 " in cmdline:
-    casename = 'images/nokia_case3310.png'
-    oldsnake = False
-elif "--nocase " in cmdline:
-    casename = ''
-elif "--6110 " in cmdline:
-    casename = 'images/nokia_oldcase6110.png'
-    oldsnake = True
-elif "--5110 " in cmdline:
-    casename = 'images/nokia_oldcase5110.png'
-    oldsnake = True
-else:
-    casename = random.choice(glob.glob('images/nokia_case*.png'))
-
-if "--old " in cmdline or oldsnake:
-    oldsnake = True
-    ANIMAL_FREQUENCY = 0                # no animals on first Snake
-    NUM_OF_CELLS_WIDTH = 20
-    NUM_OF_CELLS_HEIGHT = 13
-    CELL_SIZE = 12                      # smaller cells
-    TOP_OFFSET = 0                      # no score! no this is 0
-    GREEN = (0x8d, 0xbd, 0x8d)          # different greens
-    TRUEGREEN = (0x80, 0xb0, 0x82)  
-    GAMEOVER_TIMEOUT_MS = 60000         # no rush to get to title screen
-    tunename = 'sounds/nokia_tune.wav'  # no fancy stuff
-    SNAKE_UPDATE_MS = 200
-
-    RETRO_BONUS_AFTER_SCORE = 50 * 7    # after 50 orbs, otherwise too hard, not fun!
-    
-    # if no old nokia case overlay is selected, select one from the old case overlays
-    if casename != '' and not 'oldcase' in casename:
-        casename = random.choice(glob.glob('images/nokia_oldcase*.png'))
-
-
-if '7110' in casename:
-    # 7110-optimized play field 
-    NUM_OF_CELLS_WIDTH = 26
-    NUM_OF_CELLS_HEIGHT = 21
-
-# play field is different, when no overlay (oxcept in old snake game)
-if casename == '':
-    if not oldsnake:
-        NUM_OF_CELLS_WIDTH = 30
-        NUM_OF_CELLS_HEIGHT = 20
-    else:
-        CELL_SIZE = 18
-        FONT_SIZE = 50          # title screen font
-        SCROLL_FONT_SIZE = 32   # game over font
-
-# game area size
-GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
-GAME_H = TOP_OFFSET + 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_HEIGHT
-
-WINDOW_W = 1280
-WINDOW_H = 720
-
-if "--nocase " in cmdline:
-    OFFSET = 50
-    GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
-    GAME_H = TOP_OFFSET + 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_HEIGHT
-    WINDOW_W = GAME_W
-    WINDOW_H = GAME_H
-
 # scroll text
 
 scrolltext = '      Welcome to Snake Pi, a remake of the 1998 Nokia game "Snake II". Snake Pi was made specifically for RetroPie, hence the name. Thanks to Sara Martinez for the groundwork. Kind regards, MS-potilas, in 2026.    Feel free to copy and reuse my work.    High score is [HS].'
 
 SCROLLTEXT_SPEED = 5
 
-
-pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=512)
-# init Pygame
-pygame.init()
-
-# get full screen size (for example 1920x1080 or 1280x720)
-display_info = pygame.display.Info()
-FULL_SCREEN_W = display_info.current_w
-FULL_SCREEN_H = display_info.current_h
-
 # overlay image size
 OVERLAY_W = 1920
 OVERLAY_H = 1080
 
-# calculate game area offset
-OFFSET_X = (OVERLAY_W - GAME_W) // 2
-OFFSET_Y = (OVERLAY_H - GAME_H) // 2
 
+# FLAG: original (old / first) Snake game (oldsnake = True), or newer Snake II (oldsnake = False)
+# cmdline:  --old               : sets oldsnake True
+#           --oldrandom         : includes old snake in random game and overlay selection
+#                                 probability to get old tyle game is 20%
+oldsnake = False
+
+# User events
+EV_SNAKE_UPDATE = pygame.USEREVENT + 1
+EV_ENABLE_INPUT = pygame.USEREVENT + 2
+EV_GAME_OVER_TIMEOUT = pygame.USEREVENT + 3
+EV_PLAY_MUSIC = pygame.USEREVENT + 4
+
+# change working dir to same as the script's
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
+# globals
+tunename = ''
+casename = ''
+GAME_W = 100
+GAME_H = 100
+WINDOW_W = 1280
+WINDOW_H = 720
+OFFSET_X = 0
+OFFSET_Y = 0
+fullscreen = False
+overlay = None
+titleimage = None
+GAME_SURFACE = None
+IMG_NAMES = []
+IMAGES = {}
+FORMAT_IMAGES = {}
 
 # don't know if this works on windows or mac
 def is_windowing_system():
@@ -163,103 +102,254 @@ def is_windowing_system():
     return False
 
 
-fullscreen = False
+# recycle next overlay and/or game style
+# if --old is used, cycle between 5110 and 6110
+# if --oldrandom is used, cycle between 5110, 6110, 7110, and 3310
+# if neither --old nor --oldrandom is used, cycle between 7110 and 3310
+def reinit_next_game():
+    global oldsnake, cmdline, casename, fullscreen
+    argv = []
+    if fullscreen:
+        argv.append('--fullscreen')
+    else:
+        argv.append('--windowed')
+    if casename == '':
+        argv.append('--nocase')
+        if oldsnake:
+            pass
+        else:
+            argv.append('--old')
+    else:
+        if '-old ' in cmdline:
+            argv.append('--old')
+            if '5110' in casename:
+                argv.append('--6110')
+            elif '6110' in casename:
+                argv.append('--5110')
+        elif '-oldrandom ' in cmdline or '5110' in casename or '6110' in casename:
+            argv.append('--oldrandom')
+            if '5110' in casename:
+                argv.append('--6110')
+            elif '6110' in casename:
+                argv.append('--7110')
+            elif '7110' in casename:
+                argv.append('--3310')
+            elif '3310' in casename:
+                argv.append('--5110')
+        else:
+            if '7110' in casename:
+                argv.append('--3310')
+            elif '3310' in casename:
+                argv.append('--7110')
+    # new command line
+    cmdline = " " + (" ".join(argv)) + " "     
 
-if (is_windowing_system() and not "--fullscreen " in cmdline) or "--windowed " in cmdline:
-    # create a window (under X or Wayland, for example)
-    MAIN_SCREEN = pygame.display.set_mode((WINDOW_W, WINDOW_H), pygame.RESIZABLE )
-    pygame.display.set_caption("Snake Pi")
-else:
-    # create full screen display 
-    MAIN_SCREEN = pygame.display.set_mode((FULL_SCREEN_W, FULL_SCREEN_H), pygame.FULLSCREEN | pygame.NOFRAME )
-    pygame.mouse.set_visible(False)         # hide mouse cursor
-    fullscreen = True
+# reinit globals according to command line options, (re)init pygame
+def reinit_globals():
+    global cmdline, oldsnake, OFFSET, CELL_SIZE, TOP_OFFSET, NUM_OF_CELLS_WIDTH, NUM_OF_CELLS_HEIGHT, SNAKE_UPDATE_MS, IMAGES, FORMAT_IMAGES, tunename, casename, GAME_SURFACE, titleimage, overlay, MAIN_SCREEN, OFFSET_X, OFFSET_Y, GAME_W, GAME_H, ANIMAL_FREQUENCY, RETRO_BONUS_AFTER_SCORE, GREEN, TRUEGREEN, fullscreen
+
+    oldsnake = False
+
+    # timeouts etc
+    SNAKE_UPDATE_MS = 180
+    GAMEOVER_TIMEOUT_MS = 12000
+
+    ANIMAL_FREQUENCY = 5                # normally 5
+    RETRO_BONUS_AFTER_SCORE = 500       # normally 500
+
+    FONT_SIZE = 34                      # score and animal timer
+    SCROLL_FONT_SIZE = 24
+
+    OFFSET = 80                         # border width
+    TOP_OFFSET = 40                     # additional top border
+
+    CELL_SIZE = 22                      # 22 compatible with both overlays
+
+    # 3310 play field
+    NUM_OF_CELLS_WIDTH = 29
+    NUM_OF_CELLS_HEIGHT = 19
+
+    tunename = random.choice(glob.glob('sounds/nokia_tune*.wav'))
+
+
+    if "-oldrandom " in cmdline:
+        if random.randint(1, 5) == 1:       # old snake probability 20%
+            oldsnake = True
+
+    if "-7110 " in cmdline:
+        casename = 'images/nokia_case7110.png'
+        oldsnake = False
+    elif "-3310 " in cmdline:
+        casename = 'images/nokia_case3310.png'
+        oldsnake = False
+    elif "-nocase " in cmdline:
+        casename = ''
+    elif "-6110 " in cmdline:
+        casename = 'images/nokia_oldcase6110.png'
+        oldsnake = True
+    elif "-5110 " in cmdline:
+        casename = 'images/nokia_oldcase5110.png'
+        oldsnake = True
+    else:
+        casename = random.choice(glob.glob('images/nokia_case*.png'))
+
+    if "-old " in cmdline or oldsnake:
+        oldsnake = True
+        ANIMAL_FREQUENCY = 0                # no animals on first Snake
+        NUM_OF_CELLS_WIDTH = 20
+        NUM_OF_CELLS_HEIGHT = 13
+        CELL_SIZE = 12                      # smaller cells
+        TOP_OFFSET = 0                      # no score! no this is 0
+        GREEN = (0x8d, 0xbd, 0x8d)          # different greens
+        TRUEGREEN = (0x80, 0xb0, 0x82)  
+        GAMEOVER_TIMEOUT_MS = 60000         # no rush to get to title screen
+        tunename = 'sounds/nokia_tune.wav'  # no fancy stuff
+        SNAKE_UPDATE_MS = 200
+
+        RETRO_BONUS_AFTER_SCORE = 50 * 7    # after 50 orbs, otherwise too hard, not fun!
+        
+        # if no old nokia case overlay is selected, select one from the old case overlays
+        if casename != '' and not 'oldcase' in casename:
+            casename = random.choice(glob.glob('images/nokia_oldcase*.png'))
+
+
+    if '7110' in casename:
+        # 7110-optimized play field 
+        NUM_OF_CELLS_WIDTH = 26
+        NUM_OF_CELLS_HEIGHT = 21
+
+    # play field is different, when no overlay (oxcept in old snake game)
+    if casename == '':
+        if not oldsnake:
+            NUM_OF_CELLS_WIDTH = 30
+            NUM_OF_CELLS_HEIGHT = 20
+        else:
+            CELL_SIZE = 18
+            FONT_SIZE = 50          # title screen font
+            SCROLL_FONT_SIZE = 32   # game over font
+
+    # game area size
+    GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
+    GAME_H = TOP_OFFSET + 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_HEIGHT
+
+    WINDOW_W = 1280
+    WINDOW_H = 720
+
+    if "-nocase " in cmdline:
+        OFFSET = 50
+        GAME_W = 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_WIDTH
+        GAME_H = TOP_OFFSET + 2 * OFFSET + CELL_SIZE * NUM_OF_CELLS_HEIGHT
+        WINDOW_W = GAME_W
+        WINDOW_H = GAME_H
 
 
 
-pygame.key.set_repeat(50, SNAKE_UPDATE_MS)
+    pygame.quit()   # to reinit, call quit first
+    pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=512)
+    # init Pygame
+    pygame.init()
 
-overlay = None
-try:
-    # load overlay image (nokia_case.png)
-    # convert_alpha() makes image faster to draw while preserving alpha channel
-    overlay = pygame.image.load(casename).convert_alpha()
-except:
-    #print("Overlay image could not be loaded, continuing without.")
-    pass
+    # get full screen size (for example 1920x1080 or 1280x720)
+    display_info = pygame.display.Info()
+    FULL_SCREEN_W = display_info.current_w
+    FULL_SCREEN_H = display_info.current_h
 
-titleimage = pygame.image.load("images/snake_pi.png").convert_alpha()
-#titleimage =  scale(titleimage, (titleimage.get_width() * 1.2, titleimage.get_height() * 1.2))
-
-
-# create virtual surface for the game itself
-GAME_SURFACE = pygame.Surface((GAME_W, GAME_H))
+    # calculate game area offset
+    OFFSET_X = (OVERLAY_W - GAME_W) // 2
+    OFFSET_Y = (OVERLAY_H - GAME_H) // 2
 
 
-IMG_NAMES = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6", "animal7", "animal8", "animal9", "animal10"]
-IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)).convert_alpha() for name in IMG_NAMES}
+    fullscreen = False
 
-if oldsnake:
-    IMAGES['head'] = snakeimg = pygame.image.load("images/oldbody.png").convert_alpha()
-    IMAGES['food'] = pygame.image.load("images/oldfood.png").convert_alpha()
-   
-FORMAT_IMAGES = {
-    "food": scale(IMAGES["food"], (CELL_SIZE, CELL_SIZE)),
-    "head_R": scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)),
-    "head_L": scale(flip(IMAGES["head"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "head_U": scale(rotate(IMAGES["head"], 90), (CELL_SIZE, CELL_SIZE)),
-    "head_D": scale(flip(rotate(IMAGES["head"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
-    "body_R": scale(IMAGES["body"], (CELL_SIZE, CELL_SIZE)),
-    "body_L": scale(flip(IMAGES["body"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "body_U": scale(rotate(IMAGES["body"], 90), (CELL_SIZE, CELL_SIZE)),
-    "body_D": scale(flip(rotate(IMAGES["body"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
-    "tail_R": scale(IMAGES["tail"], (CELL_SIZE, CELL_SIZE)),
-    "tail_L": scale(flip(IMAGES["tail"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "tail_U": scale(rotate(IMAGES["tail"], 90), (CELL_SIZE, CELL_SIZE)),
-    "tail_D": scale(flip(rotate(IMAGES["tail"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
-    "turn_R": scale(IMAGES["turn"], (CELL_SIZE, CELL_SIZE)),
-    "turn_L": scale(flip(IMAGES["turn"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "turn_U": scale(rotate(IMAGES["turn"], 90), (CELL_SIZE, CELL_SIZE)),
-    "turn_D": scale(rotate(IMAGES["turn"], 180), (CELL_SIZE, CELL_SIZE)),
-    "fhead_R": scale(IMAGES["fhead"], (CELL_SIZE, CELL_SIZE)),
-    "fhead_L": scale(flip(IMAGES["fhead"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "fhead_U": scale(rotate(IMAGES["fhead"], 90), (CELL_SIZE, CELL_SIZE)),
-    "fhead_D": scale(flip(rotate(IMAGES["fhead"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
-    "fbody_R": scale(IMAGES["fbody"], (CELL_SIZE, CELL_SIZE)),
-    "fbody_L": scale(flip(IMAGES["fbody"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "fbody_U": scale(rotate(IMAGES["fbody"], 90), (CELL_SIZE, CELL_SIZE)),
-    "fbody_D": scale(flip(rotate(IMAGES["fbody"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
-    "ftail_R": scale(IMAGES["ftail"], (CELL_SIZE, CELL_SIZE)),
-    "ftail_L": scale(flip(IMAGES["ftail"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "ftail_U": scale(rotate(IMAGES["ftail"], 90), (CELL_SIZE, CELL_SIZE)),
-    "ftail_D": scale(flip(rotate(IMAGES["ftail"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
-    "fturn_R": scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)),
-    "fturn_L": scale(flip(IMAGES["fturn"], True, False), (CELL_SIZE, CELL_SIZE)),
-    "fturn_U": scale(rotate(IMAGES["fturn"], 90), (CELL_SIZE, CELL_SIZE)),
-    "fturn_D": scale(rotate(IMAGES["fturn"], 180), (CELL_SIZE, CELL_SIZE)),
-}
+    if (is_windowing_system() and not "-fullscreen " in cmdline) or "-windowed " in cmdline:
+        # create a window (under X or Wayland, for example)
+        MAIN_SCREEN = pygame.display.set_mode((WINDOW_W, WINDOW_H), pygame.RESIZABLE )
+        pygame.display.set_caption("Snake Pi")
+    else:
+        # create full screen display 
+        MAIN_SCREEN = pygame.display.set_mode((FULL_SCREEN_W, FULL_SCREEN_H), pygame.FULLSCREEN | pygame.NOFRAME )
+        pygame.mouse.set_visible(False)         # hide mouse cursor
+        fullscreen = True
 
-if oldsnake:
-    # in old snake, all snake parts are the same, without flips or rotations!
-    lst = ["head_R", "head_L", "head_U", "head_D",
-           "body_R", "body_L", "body_U", "body_D",
-           "turn_R", "turn_L", "turn_U", "turn_D",
-           "tail_R", "tail_L", "tail_U", "tail_D",
-           "fhead_R", "fhead_L", "fhead_U", "fhead_D",
-           "fbody_R", "fbody_L", "fbody_U", "fbody_D",
-           "fturn_R", "fturn_L", "fturn_U", "fturn_D",
-           "ftail_R", "ftail_L", "ftail_U", "ftail_D"]
-    for i in lst:
-        FORMAT_IMAGES[i] = FORMAT_IMAGES['head_R']
 
-# User events
-EV_SNAKE_UPDATE = pygame.USEREVENT + 1
-EV_ENABLE_INPUT = pygame.USEREVENT + 2
-EV_GAME_OVER_TIMEOUT = pygame.USEREVENT + 3
-EV_PLAY_MUSIC = pygame.USEREVENT + 4
 
-pygame.time.set_timer(EV_SNAKE_UPDATE, SNAKE_UPDATE_MS)
-pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
+    pygame.key.set_repeat(50, SNAKE_UPDATE_MS)
+
+    overlay = None
+    try:
+        # load overlay image (nokia_case.png)
+        # convert_alpha() makes image faster to draw while preserving alpha channel
+        overlay = pygame.image.load(casename).convert_alpha()
+    except:
+        #print("Overlay image could not be loaded, continuing without.")
+        pass
+
+    titleimage = pygame.image.load("images/snake_pi.png").convert_alpha()
+    #titleimage =  scale(titleimage, (titleimage.get_width() * 1.2, titleimage.get_height() * 1.2))
+
+
+    # create virtual surface for the game itself
+    GAME_SURFACE = pygame.Surface((GAME_W, GAME_H))
+
+
+    IMG_NAMES = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6", "animal7", "animal8", "animal9", "animal10"]
+    IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)).convert_alpha() for name in IMG_NAMES}
+
+    if oldsnake:
+        IMAGES['head'] = snakeimg = pygame.image.load("images/oldbody.png").convert_alpha()
+        IMAGES['food'] = pygame.image.load("images/oldfood.png").convert_alpha()
+       
+    FORMAT_IMAGES = {
+        "food": scale(IMAGES["food"], (CELL_SIZE, CELL_SIZE)),
+        "head_R": scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)),
+        "head_L": scale(flip(IMAGES["head"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "head_U": scale(rotate(IMAGES["head"], 90), (CELL_SIZE, CELL_SIZE)),
+        "head_D": scale(flip(rotate(IMAGES["head"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
+        "body_R": scale(IMAGES["body"], (CELL_SIZE, CELL_SIZE)),
+        "body_L": scale(flip(IMAGES["body"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "body_U": scale(rotate(IMAGES["body"], 90), (CELL_SIZE, CELL_SIZE)),
+        "body_D": scale(flip(rotate(IMAGES["body"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
+        "tail_R": scale(IMAGES["tail"], (CELL_SIZE, CELL_SIZE)),
+        "tail_L": scale(flip(IMAGES["tail"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "tail_U": scale(rotate(IMAGES["tail"], 90), (CELL_SIZE, CELL_SIZE)),
+        "tail_D": scale(flip(rotate(IMAGES["tail"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
+        "turn_R": scale(IMAGES["turn"], (CELL_SIZE, CELL_SIZE)),
+        "turn_L": scale(flip(IMAGES["turn"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "turn_U": scale(rotate(IMAGES["turn"], 90), (CELL_SIZE, CELL_SIZE)),
+        "turn_D": scale(rotate(IMAGES["turn"], 180), (CELL_SIZE, CELL_SIZE)),
+        "fhead_R": scale(IMAGES["fhead"], (CELL_SIZE, CELL_SIZE)),
+        "fhead_L": scale(flip(IMAGES["fhead"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "fhead_U": scale(rotate(IMAGES["fhead"], 90), (CELL_SIZE, CELL_SIZE)),
+        "fhead_D": scale(flip(rotate(IMAGES["fhead"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
+        "fbody_R": scale(IMAGES["fbody"], (CELL_SIZE, CELL_SIZE)),
+        "fbody_L": scale(flip(IMAGES["fbody"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "fbody_U": scale(rotate(IMAGES["fbody"], 90), (CELL_SIZE, CELL_SIZE)),
+        "fbody_D": scale(flip(rotate(IMAGES["fbody"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
+        "ftail_R": scale(IMAGES["ftail"], (CELL_SIZE, CELL_SIZE)),
+        "ftail_L": scale(flip(IMAGES["ftail"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "ftail_U": scale(rotate(IMAGES["ftail"], 90), (CELL_SIZE, CELL_SIZE)),
+        "ftail_D": scale(flip(rotate(IMAGES["ftail"], 270), True, False), (CELL_SIZE, CELL_SIZE)),
+        "fturn_R": scale(IMAGES["fturn"], (CELL_SIZE, CELL_SIZE)),
+        "fturn_L": scale(flip(IMAGES["fturn"], True, False), (CELL_SIZE, CELL_SIZE)),
+        "fturn_U": scale(rotate(IMAGES["fturn"], 90), (CELL_SIZE, CELL_SIZE)),
+        "fturn_D": scale(rotate(IMAGES["fturn"], 180), (CELL_SIZE, CELL_SIZE)),
+    }
+
+    if oldsnake:
+        # in old snake, all snake parts are the same, without flips or rotations!
+        lst = ["head_R", "head_L", "head_U", "head_D",
+               "body_R", "body_L", "body_U", "body_D",
+               "turn_R", "turn_L", "turn_U", "turn_D",
+               "tail_R", "tail_L", "tail_U", "tail_D",
+               "fhead_R", "fhead_L", "fhead_U", "fhead_D",
+               "fbody_R", "fbody_L", "fbody_U", "fbody_D",
+               "fturn_R", "fturn_L", "fturn_U", "fturn_D",
+               "ftail_R", "ftail_L", "ftail_U", "ftail_D"]
+        for i in lst:
+            FORMAT_IMAGES[i] = FORMAT_IMAGES['head_R']
+
+    pygame.time.set_timer(EV_SNAKE_UPDATE, SNAKE_UPDATE_MS)
+    pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
 
 
 # quick and dirty class for reading joysticks
@@ -625,6 +715,9 @@ class Game:
                 if ev.type == pygame.QUIT:
                     self.QUIT()
                 if ev.type == pygame.KEYDOWN:
+                    # 0 / O / N: cycle next overlay
+                    if ev.key == pygame.K_0 or ev.key == pygame.K_o or ev.key == pygame.K_n:
+                        return
                     # ESCAPE and Q key quits
                     if ev.key == pygame.K_ESCAPE or ev.key == pygame.K_q:
                         self.QUIT()
@@ -744,8 +837,11 @@ class Game:
 
 if __name__ == '__main__':
     try:
-        game = Game(oldsnake)
-        game.run()
+        while True:
+            reinit_globals()
+            game = Game(oldsnake)
+            game.run()
+            reinit_next_game()
     except KeyboardInterrupt:
         game.QUIT()
     
