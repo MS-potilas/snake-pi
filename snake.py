@@ -9,89 +9,54 @@ from pygame.transform import flip, rotate, scale
 # Snake Pi modifications by MS-potilas 2026
 # Snake Pi made for RetroPie, but can be run also without it.
 
+# change working dir to same as the script's
+abspath_ = os.path.abspath(__file__)
+dname_ = os.path.dirname(abspath_)
+os.chdir(dname_)
+
+# store command line
+cmdline = " " + (" ".join(sys.argv)) + " "
+cmdline = cmdline.replace('‑', '-')         # non-breaking hyphen to hyphen (used in README.md)
+
+# immutable globals:
+
 # name of the game for old style title screen
 oldtitle = "Snake Pi"
 
-cmdline = " " + (" ".join(sys.argv)) + " "
-cmdline = cmdline.replace('‑', '-')  # non-breaking hyphen to hyphen
-
-
-# FPS
+# FPS immutable
 FRAME_RATE = 30                     # more authentic than 60 fps?
 
-# timeouts etc
-SNAKE_UPDATE_MS = 180
-GAMEOVER_TIMEOUT_MS = 12000
+# timeouts immutable
 ENABLE_INPUT_AFTER_GAMEOVER_MS = 3000
 PLAY_TITLE_MUSIC_AFTER_MS = 500
 
-# Colors (R, G, B)
-GREEN = (112, 142, 83)
-TRUEGREEN = (0x6d, 0x8b, 0x50)      # green left after ghosting effect
+# Colors (R, G, B) immutable
 BLACK = (0x1f, 0x22, 0x18)          # greenish LCD-black
-LESSBLACK = (0x30, 0x35, 0x2A)      # something semi-odd for scrolltext
-
-ANIMAL_FREQUENCY = 5                # normally 5
-RETRO_BONUS_AFTER_SCORE = 500       # normally 500
 
 MOBILE_PHONE_ANIMAL_INDEX = 10      # eating this plays nokia tune
 
-FONT_SIZE = 34                      # score and animal timer
-SCROLL_FONT_SIZE = 24
-
-OFFSET = 80                         # border width
-TOP_OFFSET = 40                     # additional top border
-
-CELL_SIZE = 22                      # 22 compatible with both overlays
-
-# 3310 play field
-NUM_OF_CELLS_WIDTH = 29
-NUM_OF_CELLS_HEIGHT = 19
-
 # scroll text
-
 scrolltext = '      Welcome to Snake Pi, a remake of the 1998 Nokia game "Snake II". Snake Pi was made specifically for RetroPie, hence the name. Thanks to Sara Martinez for the groundwork. Kind regards, MS-potilas, in 2026.    Feel free to copy and reuse my work.    High score is [HS].'
-
-SCROLLTEXT_SPEED = 5
+SCROLLTEXT_SPEED = 4
 
 # overlay image size
 OVERLAY_W = 1920
 OVERLAY_H = 1080
 
+pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=512)
+# init Pygame
+pygame.init()
 
-# FLAG: original (old / first) Snake game (oldsnake = True), or newer Snake II (oldsnake = False)
-# cmdline:  --old               : sets oldsnake True
-#           --oldrandom         : includes old snake in random game and overlay selection
-#                                 probability to get old tyle game is 20%
-oldsnake = False
+# get full screen size (for example 1920x1080 or 1280x720)
+display_info = pygame.display.Info()
+FULL_SCREEN_W = display_info.current_w
+FULL_SCREEN_H = display_info.current_h
 
 # User events
 EV_SNAKE_UPDATE = pygame.USEREVENT + 1
 EV_ENABLE_INPUT = pygame.USEREVENT + 2
 EV_GAME_OVER_TIMEOUT = pygame.USEREVENT + 3
 EV_PLAY_MUSIC = pygame.USEREVENT + 4
-
-# change working dir to same as the script's
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
-
-# globals
-tunename = ''
-casename = ''
-GAME_W = 100
-GAME_H = 100
-WINDOW_W = 1280
-WINDOW_H = 720
-OFFSET_X = 0
-OFFSET_Y = 0
-fullscreen = False
-overlay = None
-titleimage = None
-GAME_SURFACE = None
-IMG_NAMES = []
-IMAGES = {}
-FORMAT_IMAGES = {}
 
 # don't know if this works on windows or mac
 def is_windowing_system():
@@ -101,55 +66,20 @@ def is_windowing_system():
         return True
     return False
 
-
-# recycle next overlay and/or game style
-# if --old is used, cycle between 5110 and 6110
-# if --oldrandom is used, cycle between 5110, 6110, 7110, and 3310
-# if neither --old nor --oldrandom is used, cycle between 7110 and 3310
-def reinit_next_game():
-    global oldsnake, cmdline, casename, fullscreen
-    argv = []
-    if fullscreen:
-        argv.append('--fullscreen')
-    else:
-        argv.append('--windowed')
-    if casename == '':
-        argv.append('--nocase')
-        if oldsnake:
-            pass
-        else:
-            argv.append('--old')
-    else:
-        if '-old ' in cmdline:
-            argv.append('--old')
-            if '5110' in casename:
-                argv.append('--6110')
-            elif '6110' in casename:
-                argv.append('--5110')
-        elif '-oldrandom ' in cmdline or '5110' in casename or '6110' in casename:
-            argv.append('--oldrandom')
-            if '5110' in casename:
-                argv.append('--6110')
-            elif '6110' in casename:
-                argv.append('--7110')
-            elif '7110' in casename:
-                argv.append('--3310')
-            elif '3310' in casename:
-                argv.append('--5110')
-        else:
-            if '7110' in casename:
-                argv.append('--3310')
-            elif '3310' in casename:
-                argv.append('--7110')
-    # new command line
-    cmdline = " " + (" ".join(argv)) + " "     
-
-# reinit globals according to command line options, (re)init pygame
+# reinit mutable globals according to command line options, init pygame display and keyboard
 def reinit_globals():
-    global cmdline, oldsnake, OFFSET, CELL_SIZE, TOP_OFFSET, NUM_OF_CELLS_WIDTH, NUM_OF_CELLS_HEIGHT, SNAKE_UPDATE_MS, IMAGES, FORMAT_IMAGES, tunename, casename, GAME_SURFACE, titleimage, overlay, MAIN_SCREEN, OFFSET_X, OFFSET_Y, GAME_W, GAME_H, ANIMAL_FREQUENCY, RETRO_BONUS_AFTER_SCORE, GREEN, TRUEGREEN, fullscreen
+    global cmdline, oldsnake, OFFSET, CELL_SIZE, TOP_OFFSET, NUM_OF_CELLS_WIDTH, NUM_OF_CELLS_HEIGHT, SNAKE_UPDATE_MS, GAMEOVER_TIMEOUT_MS, IMAGES, FORMAT_IMAGES, tunename, casename, GAME_SURFACE, titleimage, overlay, MAIN_SCREEN, GAME_W, GAME_H, ANIMAL_FREQUENCY, RETRO_BONUS_AFTER_SCORE, GREEN, TRUEGREEN, fullscreen, FONT_SIZE, SCROLL_FONT_SIZE
 
+    # FLAG: original (old / first) Snake game (oldsnake = True), or newer Snake II (oldsnake = False)
+    # cmdline:  --old               : sets oldsnake True
+    #           --oldrandom         : includes old snake in random game and overlay selection
+    #                                 probability to get old tyle game is 20%
     oldsnake = False
 
+    # 7110 and 3310 colors
+    GREEN = (112, 142, 83)
+    TRUEGREEN = (0x6d, 0x8b, 0x50)      # green left after ghosting effect
+    
     # timeouts etc
     SNAKE_UPDATE_MS = 180
     GAMEOVER_TIMEOUT_MS = 12000
@@ -242,23 +172,7 @@ def reinit_globals():
         WINDOW_W = GAME_W
         WINDOW_H = GAME_H
 
-
-
-    pygame.quit()   # to reinit, call quit first
-    pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=512)
-    # init Pygame
-    pygame.init()
-
-    # get full screen size (for example 1920x1080 or 1280x720)
-    display_info = pygame.display.Info()
-    FULL_SCREEN_W = display_info.current_w
-    FULL_SCREEN_H = display_info.current_h
-
-    # calculate game area offset
-    OFFSET_X = (OVERLAY_W - GAME_W) // 2
-    OFFSET_Y = (OVERLAY_H - GAME_H) // 2
-
-
+    pygame.display.quit()
     fullscreen = False
 
     if (is_windowing_system() and not "-fullscreen " in cmdline) or "-windowed " in cmdline:
@@ -271,10 +185,6 @@ def reinit_globals():
         pygame.mouse.set_visible(False)         # hide mouse cursor
         fullscreen = True
 
-
-
-    pygame.key.set_repeat(50, SNAKE_UPDATE_MS)
-
     overlay = None
     try:
         # load overlay image (nokia_case.png)
@@ -285,15 +195,12 @@ def reinit_globals():
         pass
 
     titleimage = pygame.image.load("images/snake_pi.png").convert_alpha()
-    #titleimage =  scale(titleimage, (titleimage.get_width() * 1.2, titleimage.get_height() * 1.2))
-
 
     # create virtual surface for the game itself
     GAME_SURFACE = pygame.Surface((GAME_W, GAME_H))
 
-
-    IMG_NAMES = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6", "animal7", "animal8", "animal9", "animal10"]
-    IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)).convert_alpha() for name in IMG_NAMES}
+    img_names_ = ["food", "head", "body", "tail", "turn", "fhead", "fbody", "ftail", "fturn", "animal1", "animal2", "animal3", "animal4", "animal5", "animal6", "animal7", "animal8", "animal9", "animal10"]
+    IMAGES = { name: pygame.image.load("images/" + "{}.png".format(name)).convert_alpha() for name in img_names_}
 
     if oldsnake:
         IMAGES['head'] = snakeimg = pygame.image.load("images/oldbody.png").convert_alpha()
@@ -348,8 +255,53 @@ def reinit_globals():
         for i in lst:
             FORMAT_IMAGES[i] = FORMAT_IMAGES['head_R']
 
+    pygame.key.set_repeat(50, SNAKE_UPDATE_MS // 2)
+
     pygame.time.set_timer(EV_SNAKE_UPDATE, SNAKE_UPDATE_MS)
     pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
+
+
+# recycle to next overlay and/or game style
+# if --old is used, cycle between 5110 and 6110
+# if --oldrandom is used, cycle between 5110, 6110, 7110, and 3310
+# if neither --old nor --oldrandom is used, cycle between 7110 and 3310
+def reinit_next_game_cmdline():
+    global oldsnake, cmdline, casename, fullscreen
+    argv = []
+    if fullscreen:
+        argv.append('--fullscreen')
+    else:
+        argv.append('--windowed')
+    if casename == '':
+        argv.append('--nocase')
+        if oldsnake:
+            pass
+        else:
+            argv.append('--old')
+    else:
+        if '-old ' in cmdline:
+            argv.append('--old')
+            if '5110' in casename:
+                argv.append('--6110')
+            elif '6110' in casename:
+                argv.append('--5110')
+        elif '-oldrandom ' in cmdline or '5110' in casename or '6110' in casename:
+            argv.append('--oldrandom')
+            if '5110' in casename:
+                argv.append('--6110')
+            elif '6110' in casename:
+                argv.append('--7110')
+            elif '7110' in casename:
+                argv.append('--3310')
+            elif '3310' in casename:
+                argv.append('--5110')
+        else:
+            if '7110' in casename:
+                argv.append('--3310')
+            elif '3310' in casename:
+                argv.append('--7110')
+    # new command line
+    cmdline = " " + (" ".join(argv)) + " "     
 
 
 # quick and dirty class for reading joysticks
@@ -556,16 +508,16 @@ class Game:
         # select random nokia tune for title screen
         self.nokia_tune = pygame.mixer.Sound(tunename)
         self.score_font = pygame.font.Font("fonts/nokiafc22.ttf", FONT_SIZE)
-        self.input_active = True
-
         self.scroll_font = pygame.font.Font("fonts/nokiafc22.ttf", SCROLL_FONT_SIZE)
+
+        self.input_active = True
         
         self.gameover_text = ''
         self.high_score = 0
         self.load_highscore()
         self.scroll_text = None
         self.scroll_rect = None
-        self.update_scrolltext()
+        self.update_scrolltext_hs()
         
         self.ghost_layer = pygame.Surface((GAME_W, GAME_H))
         self.ghost_layer.fill(TRUEGREEN)
@@ -584,9 +536,9 @@ class Game:
         except:
             pass
     
-    def update_scrolltext(self):
+    def update_scrolltext_hs(self):
         scrolltext_hs = scrolltext.replace('[HS]', str(self.high_score))
-        self.scroll_text = self.scroll_font.render(scrolltext_hs, True, LESSBLACK)
+        self.scroll_text = self.scroll_font.render(scrolltext_hs, True, BLACK)
         self.scroll_rect = self.scroll_text.get_rect(left=GAME_W, top=GAME_H - OFFSET - FONT_SIZE)
         
         
@@ -707,7 +659,7 @@ class Game:
                     pygame.time.set_timer(EV_GAME_OVER_TIMEOUT, 0)
                     if self.status == 'GAME_OVER':
                         self.status = "PRE_GAME"
-                        self.update_scrolltext()
+                        self.update_scrolltext_hs()
                         self.reset_timer()
                 if ev.type == EV_PLAY_MUSIC:
                     pygame.time.set_timer(EV_PLAY_MUSIC, 0)
@@ -715,9 +667,6 @@ class Game:
                 if ev.type == pygame.QUIT:
                     self.QUIT()
                 if ev.type == pygame.KEYDOWN:
-                    # 0 / O / N: cycle next overlay
-                    if ev.key == pygame.K_0 or ev.key == pygame.K_o or ev.key == pygame.K_n:
-                        return
                     # ESCAPE and Q key quits
                     if ev.key == pygame.K_ESCAPE or ev.key == pygame.K_q:
                         self.QUIT()
@@ -740,8 +689,10 @@ class Game:
                         self.play()
                     self.update()
                 if ev.type == pygame.KEYDOWN:
-                    total_seconds = 9 - (self.num_of_frames // FRAME_RATE)
-                    if self.status == "PRE_GAME" or (self.status == "GAME_OVER" and self.input_active):
+                    if (self.status == "PRE_GAME" or self.status == "GAME_OVER") and self.input_active:
+                        # 0 / O / N: cycle next overlay
+                        if ev.key == pygame.K_0 or ev.key == pygame.K_o or ev.key == pygame.K_n:
+                            return
                         if ev.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_SPACE, pygame.K_RETURN, pygame.K_KP2, pygame.K_KP4, pygame.K_KP6, pygame.K_KP8]:
                             self.play()
                     if self.status == 'PLAYING':
@@ -755,9 +706,22 @@ class Game:
                             self.snake.direction = Vector2(1, 0)
                         
 
+            # lcd ghosting effect. get game surface
+            self.ghost_layer.blit(GAME_SURFACE, (0, 0))
+
+            # fade-out using temporary surface
+            ghost_cover = pygame.Surface((GAME_W, GAME_H))
+            ghost_cover.fill(GREEN)
+            ghost_cover.set_alpha(128)
+
+            self.ghost_layer.blit(ghost_cover, (0, 0))
+
+            # emoty game surface
+            GAME_SURFACE.fill(TRUEGREEN)
+
+            # add ghost layer on top
+            GAME_SURFACE.blit(self.ghost_layer, (0, 0))
             if self.status == 'PRE_GAME':
-                # title screen
-                GAME_SURFACE.fill(TRUEGREEN)
                 if self.oldsnake:
                     go_surf = self.score_font.render(oldtitle, True, BLACK);
                     go_rect = go_surf.get_rect()
@@ -771,22 +735,7 @@ class Game:
                         self.scroll_rect.x = GAME_W*2         # then move to right side
                     GAME_SURFACE.blit(self.scroll_text, self.scroll_rect)
             else:
-                # lcd ghosting effect. get game surface
-                self.ghost_layer.blit(GAME_SURFACE, (0, 0))
-
-                # fade-out using temporary surface
-                ghost_cover = pygame.Surface((GAME_W, GAME_H))
-                ghost_cover.fill(GREEN)
-                ghost_cover.set_alpha(128)
-
-                self.ghost_layer.blit(ghost_cover, (0, 0))
-
-                # emoty game surface
-                GAME_SURFACE.fill(TRUEGREEN)
-
-                # add ghost layer on top
-                GAME_SURFACE.blit(self.ghost_layer, (0, 0))
-                    
+                
                 # then the rest of the drawing
                 self.draw()
                 if not self.oldsnake:
@@ -822,11 +771,15 @@ class Game:
             WIN_W, WIN_H = MAIN_SCREEN.get_size()
             
             # game surface to middle of the screen
-            MAIN_SCREEN.blit(GAME_SURFACE, (OFFSET_X - (1920-WIN_W)//2, OFFSET_Y - (1080-WIN_H)//2))
+            OFFSET_X = (OVERLAY_W - GAME_W) // 2
+            OFFSET_Y = (OVERLAY_H - GAME_H) // 2
+
+            # center it in the window
+            MAIN_SCREEN.blit(GAME_SURFACE, (OFFSET_X - (OVERLAY_W-WIN_W)//2, OFFSET_Y - (OVERLAY_H-WIN_H)//2))   # working
             
             # overlay
             if overlay:
-                MAIN_SCREEN.blit(overlay, (-(1920-WIN_W)//2, -(1080-WIN_H)//2))
+                MAIN_SCREEN.blit(overlay, (-(OVERLAY_W-WIN_W)//2, -(OVERLAY_H-WIN_H)//2))
 
             # update display
             pygame.display.flip()
@@ -841,7 +794,8 @@ if __name__ == '__main__':
             reinit_globals()
             game = Game(oldsnake)
             game.run()
-            reinit_next_game()
+            pygame.mixer.stop()    # stop playing 
+            reinit_next_game_cmdline()
     except KeyboardInterrupt:
         game.QUIT()
     
