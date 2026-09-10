@@ -132,6 +132,10 @@ sudo apt install python3-pygame
 | `--old` | Opens the original Snake gameplay with a randomly chosen overlay (unless `--nocase` is used). |
 | `‑‑oldrandom` | Includes the original Snake gameplay in the random overlay selection with a 20% probability. |
 
+### High Score
+
+If the script's directory is writable, the high score (in Snake II type game) is saved to the `.highscore` file. The high score can be reset by deleting that file.
+
 ### RetroPie Installation (Ports menu)
 
 To add Snake Pi to your RetroPie **Ports** menu so it can be launched directly from EmulationStation, follow these steps:
