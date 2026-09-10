@@ -172,7 +172,7 @@ Gamelist entry values for the default Snake II style game:
 ```xml
 name:        Snake Pi
 path:        ./Snake_Pi.sh
-desc:        Snake Pi is a retro-style clone of the classic Snake II game included in phones such as the Nokia 7110 and Nokia 3310. Collect as much food as possible while avoiding walls and your own tail.
+desc:        Snake Pi is a retro-style clone of the classic Snake II game included in phones such as the Nokia 7110 and Nokia 3310. Collect as much food as possible while avoiding walls and your own tail. When not playing, switch to another overlay (Nokia 7110 or 3310) by pressing the N key.
 image:       ~/RetroPie/roms/ports/snake-pi/assets/snake_collage.jpg
 genre:       Action
 releasedate: 20260909T000000
@@ -183,12 +183,12 @@ publisher:   Public Domain
 **Optional descriptions and images depending on your setup:**
 
 *   **For the Original Snake I launcher (`--old`):**
-    > "Snake Pi is a retro-style clone of the classic Snake game included in phones such as the Nokia 6110 and Nokia 5110. Collect as much food as possible while avoiding walls and your own tail."
+    > "Snake Pi is a retro-style clone of the classic Snake game included in phones such as the Nokia 6110 and Nokia 5110. Collect as much food as possible while avoiding walls and your own tail. When not playing, switch to another overlay (Nokia 5110 or 6110) by pressing the N key."
     
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/5110_game.jpg`
 
 *   **For the combined launcher (`--oldrandom`):**
-    > "Snake Pi is a retro-styled clone of the classic Snake and Snake II games included in old Nokia phones. Collect as much food as possible while avoiding walls and your own tail."
+    > "Snake Pi is a retro-styled clone of the classic Snake and Snake II games included in old Nokia phones. Collect as much food as possible while avoiding walls and your own tail. When not playing, switch to the next overlay (3310/5110/6110/7110) and game style (Snake/Snake II) by pressing the N key."
     
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/snake_collage.jpg`
 
