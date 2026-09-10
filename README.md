@@ -163,7 +163,7 @@ The instructions above create a launcher for the default Snake II style game. If
 
 Alternatively, if you want a separate menu entry for the older game style, you can create a second launch script (for example, `Snake_Pi_I.sh`) and add the `--old` flag to the python command.
 
-Once you have launched the game, you can use N or O key to swith to next overlay and game style, according to command line options. If `--old` is used, it switches between Nokia 5110 and 6110 overlays. If `--oldrandom` is used, it switches between all overlays (Nokia 3310, 5110, 6110, and 7110). If neither `--old` nor `--oldrandom` is used, it switches between Nokia 3310 and 7110 overlays. If `--nocase` is used, it switches between Snake and Snake II gameplay.
+Once you have launched the game, you can press the N (or O) key to swith to next overlay and game style, according to command line options. If `--old` is used, it switches between Nokia 5110 and 6110 overlays. If `--oldrandom` is used, it switches between all overlays (Nokia 3310, 5110, 6110, and 7110). If neither `--old` nor `--oldrandom` is used, it switches between Nokia 3310 and 7110 overlays. If `--nocase` is used, it switches between Snake and Snake II gameplay.
 
 #### EmulationStation Gamelist Entry
 
