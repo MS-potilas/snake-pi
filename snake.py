@@ -650,8 +650,11 @@ class Game:
 
 
     def run(self):
+        windowresized = True    # first time update (flip) everything
         while True:                
             for ev in pygame.event.get():
+                if ev.type == pygame.VIDEORESIZE:
+                    windowresized = True
                 if ev.type == EV_ENABLE_INPUT:
                     pygame.time.set_timer(EV_ENABLE_INPUT, 0)
                     self.input_active = True
@@ -782,8 +785,12 @@ class Game:
                 MAIN_SCREEN.blit(overlay, (-(OVERLAY_W-WIN_W)//2, -(OVERLAY_H-WIN_H)//2))
 
             # update display
-            pygame.display.flip()
-            #pygame.display.update()
+            if windowresized:
+                pygame.display.update(MAIN_SCREEN.get_rect())   # update the window area
+                windowresized = False
+            else:
+                # update only game surface area of the window
+                pygame.display.update(GAME_SURFACE.get_rect().move((OFFSET_X - (OVERLAY_W-WIN_W)//2, OFFSET_Y - (OVERLAY_H-WIN_H)//2)))
             
             self.clock.tick(FRAME_RATE)
 
