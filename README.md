@@ -6,9 +6,9 @@
 
 ## About
 
-**Snake Pi** is a modern, retro-styled clone of the classic **Nokia Snake II** game. It features nostalgic Nokia phone overlays and joystick support. 
+**Snake Pi** is a modern, retro-styled clone of the classic **Nokia Snake II** game. It features nostalgic Nokia phone overlays and joystick support.
 
-While specifically optimized to run on **RetroPie**, it can also be played on any standard desktop environment (Linux, macOS, Windows). 
+While specifically optimized to run on **RetroPie**, it can also be played on any standard desktop environment (Linux, macOS, Windows).
 
 *This project is a fork of [Sara Martínez's snake-game](https://github.com/smartido/snake-game). It includes bug fixes, gameplay improvements, optimized game logic, and overlay images.*
 
@@ -155,6 +155,11 @@ To add Snake Pi to your RetroPie **Ports** menu so it can be launched directly f
    #!/bin/bash
    python3 ~/RetroPie/roms/ports/snake-pi/snake.py
    ```
+   You can add command-line options after snake.py, or you can put the command-line options into a text file named `.cmdline` located in the same folder as `snake.py`. This is generally easier, because you don't have to remember what script or file to edit to modify the command line options. Put all the options on one line, like this:
+   ```bash
+   --7110 --oldrandom
+   ```
+
 
 4. **Make the script executable**:
    ```bash
@@ -163,7 +168,7 @@ To add Snake Pi to your RetroPie **Ports** menu so it can be launched directly f
 
 5. **Restart EmulationStation** (via the Main Menu -> Quit -> Restart EmulationStation), and **Snake Pi** will appear under the *Ports* system!
 
-The instructions above create a launcher for the default Snake II style game. If you wish to include the original Snake game with the Nokia 5110/6110 overlays, you can add the `--oldrandom` flag to the script. 
+The instructions above create a launcher for the default Snake II style game. If you wish to include the original Snake game with the Nokia 5110/6110 overlays, you can add the `--oldrandom` flag to the script.
 
 Alternatively, if you want a separate menu entry for the older game style, you can create a second launch script (for example, `Snake_Pi_I.sh`) and add the `--old` flag to the python command.
 
@@ -188,12 +193,12 @@ publisher:   Public Domain
 
 *   **For the Original Snake I launcher (`--old`):**
     > "Snake Pi is a retro-style clone of the classic Snake game included in phones such as the Nokia 6110 and Nokia 5110. Collect as much food as possible while avoiding walls and your own tail. When not playing, switch to another overlay (Nokia 5110 or 6110) by pressing the N key."
-    
+
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/5110_game.jpg`
 
 *   **For the combined launcher (`--oldrandom`):**
     > "Snake Pi is a retro-styled clone of the classic Snake and Snake II games included in old Nokia phones. Collect as much food as possible while avoiding walls and your own tail. When not playing, switch to the next overlay (3310/5110/6110/7110) and game style (Snake/Snake II) by pressing the N key."
-    
+
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/snake_collage.jpg`
 
 
