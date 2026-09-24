@@ -14,8 +14,17 @@ abspath_ = os.path.abspath(__file__)
 dname_ = os.path.dirname(abspath_)
 os.chdir(dname_)
 
-# store command line
+# get command line to one variable
 cmdline = " " + (" ".join(sys.argv)) + " "
+
+# override command line with .cmdline file, if it exists
+try:
+    with open('.cmdline', "r") as f:
+        cmdline = f.readline().strip()
+    cmdline = " " + cmdline + " "
+except:
+    pass
+
 cmdline = cmdline.replace('‑', '-')         # non-breaking hyphen to hyphen (used in README.md)
 
 # immutable globals:
@@ -25,6 +34,14 @@ oldtitle = "Snake Pi"
 
 # FPS immutable
 FRAME_RATE = 30                     # more authentic than 60 fps?
+
+# game speed parameters
+SNAKE_I_UPDATE_MS = 200
+SNAKE_II_UPDATE_MS = 170
+MIN_SNAKE_UPDATE = 120              # minimum update ms
+LEVEL_UP_INTERVAL = 5               # how often game speeds up (level rise)
+SPEED_DROP_PER_LEVEL = 7            # how many milliseconds per level
+
 
 # timeouts immutable
 ENABLE_INPUT_AFTER_GAMEOVER_MS = 3000
@@ -79,9 +96,9 @@ def reinit_globals():
     # 7110 and 3310 colors
     GREEN = (112, 142, 83)
     TRUEGREEN = (0x6d, 0x8b, 0x50)      # green left after ghosting effect
-    
+
     # timeouts etc
-    SNAKE_UPDATE_MS = 180
+    SNAKE_UPDATE_MS = SNAKE_II_UPDATE_MS
     GAMEOVER_TIMEOUT_MS = 12000
 
     ANIMAL_FREQUENCY = 5                # normally 5
@@ -129,22 +146,22 @@ def reinit_globals():
         NUM_OF_CELLS_WIDTH = 20
         NUM_OF_CELLS_HEIGHT = 13
         CELL_SIZE = 12                      # smaller cells
-        TOP_OFFSET = 0                      # no score! no this is 0
+        TOP_OFFSET = 0                      # no score! so this is 0
         GREEN = (0x8d, 0xbd, 0x8d)          # different greens
-        TRUEGREEN = (0x80, 0xb0, 0x82)  
+        TRUEGREEN = (0x80, 0xb0, 0x82)
         GAMEOVER_TIMEOUT_MS = 60000         # no rush to get to title screen
         tunename = 'sounds/nokia_tune.wav'  # no fancy stuff
-        SNAKE_UPDATE_MS = 200
+        SNAKE_UPDATE_MS = SNAKE_I_UPDATE_MS
 
-        RETRO_BONUS_AFTER_SCORE = 50 * 7    # after 50 orbs, otherwise too hard, not fun!
-        
+        RETRO_BONUS_AFTER_SCORE = 50 * 7    # after circa 50 orbs, otherwise too hard, not fun!
+
         # if no old nokia case overlay is selected, select one from the old case overlays
         if casename != '' and not 'oldcase' in casename:
             casename = random.choice(glob.glob('images/nokia_oldcase*.png'))
 
 
     if '7110' in casename:
-        # 7110-optimized play field 
+        # 7110-optimized play field
         NUM_OF_CELLS_WIDTH = 26
         NUM_OF_CELLS_HEIGHT = 21
 
@@ -180,7 +197,7 @@ def reinit_globals():
         MAIN_SCREEN = pygame.display.set_mode((WINDOW_W, WINDOW_H), pygame.RESIZABLE )
         pygame.display.set_caption("Snake Pi")
     else:
-        # create full screen display 
+        # create full screen display
         MAIN_SCREEN = pygame.display.set_mode((FULL_SCREEN_W, FULL_SCREEN_H), pygame.FULLSCREEN | pygame.NOFRAME )
         pygame.mouse.set_visible(False)         # hide mouse cursor
         fullscreen = True
@@ -205,7 +222,7 @@ def reinit_globals():
     if oldsnake:
         IMAGES['head'] = snakeimg = pygame.image.load("images/oldbody.png").convert_alpha()
         IMAGES['food'] = pygame.image.load("images/oldfood.png").convert_alpha()
-       
+
     FORMAT_IMAGES = {
         "food": scale(IMAGES["food"], (CELL_SIZE, CELL_SIZE)),
         "head_R": scale(IMAGES["head"], (CELL_SIZE, CELL_SIZE)),
@@ -255,11 +272,6 @@ def reinit_globals():
         for i in lst:
             FORMAT_IMAGES[i] = FORMAT_IMAGES['head_R']
 
-    pygame.key.set_repeat(50, SNAKE_UPDATE_MS // 2)
-
-    pygame.time.set_timer(EV_SNAKE_UPDATE, SNAKE_UPDATE_MS)
-    pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
-
 
 # recycle to next overlay and/or game style
 # if --old is used, cycle between 5110 and 6110
@@ -301,7 +313,7 @@ def reinit_next_game_cmdline():
             elif '3310' in casename:
                 argv.append('--7110')
     # new command line
-    cmdline = " " + (" ".join(argv)) + " "     
+    cmdline = " " + (" ".join(argv)) + " "
 
 
 # quick and dirty class for reading joysticks
@@ -318,7 +330,7 @@ class Joystick:
             joystick.init()
             name = joystick.get_name()
             self.sticknames.append(name)
-        
+
     def get_joy(self):
         # Get count of joysticks (it may have changed? but apparently not)
         joystick_count = pygame.joystick.get_count()
@@ -401,7 +413,7 @@ class Snake:
                     return FORMAT_IMAGES[pre+"turn_D"]
             else:
                 return FORMAT_IMAGES[pre+"body_" + prev_direction]
-    
+
     def draw(self):
         for index, block in enumerate(self.body):
             snake_surface = self.get_block_image(index)
@@ -424,7 +436,7 @@ class Snake:
 
 
     def reset(self):
-        y = NUM_OF_CELLS_HEIGHT // 2 - 2 
+        y = NUM_OF_CELLS_HEIGHT // 2 - 2
         self.body = [Vector2(5, y), Vector2(4, y), Vector2(3, y)]
         self.body_directions = ["R", "R", "R"]
         self.body_foods = [0, 0, 0]
@@ -464,7 +476,7 @@ class Animal:
         self.bigimage = None
         self.phone_animal = False
         self.create_random_image()
-    
+
     def create_random_image(self, extended = False):
         random_number = random.randint(1, 10 if extended else 6)
         if random_number  == MOBILE_PHONE_ANIMAL_INDEX:
@@ -472,14 +484,14 @@ class Animal:
         else:
             self.phone_animal = False
         self.image = scale(IMAGES["animal" + str(random_number)], (CELL_SIZE, CELL_SIZE))
-        self.bigimage =  scale(IMAGES["animal" + str(random_number)], (round(CELL_SIZE*1.5), round(CELL_SIZE*1.5))) 
-    
+        self.bigimage =  scale(IMAGES["animal" + str(random_number)], (round(CELL_SIZE*1.5), round(CELL_SIZE*1.5)))
+
     def draw(self, active_timer):
         if active_timer:
             animal_surface = self.image
             animal_rect = pygame.Rect(OFFSET + self.position.x * CELL_SIZE, TOP_OFFSET + OFFSET + self.position.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
             GAME_SURFACE.blit(animal_surface, animal_rect)
-    
+
     def get_random_cell(self):
         x = random.randint(0, NUM_OF_CELLS_WIDTH - 1)
         y = random.randint(0, NUM_OF_CELLS_HEIGHT - 1)
@@ -489,7 +501,7 @@ class Animal:
         position = self.get_random_cell()
         while position in snake_body or position == food_position:
             position = self.get_random_cell()
-        return position    
+        return position
 
 
 class Game:
@@ -511,37 +523,40 @@ class Game:
         self.scroll_font = pygame.font.Font("fonts/nokiafc22.ttf", SCROLL_FONT_SIZE)
 
         self.input_active = True
-        
+
+        self.current_level = 0
+        self.current_delay = SNAKE_UPDATE_MS
+
         self.gameover_text = ''
         self.high_score = 0
         self.load_highscore()
         self.scroll_text = None
         self.scroll_rect = None
         self.update_scrolltext_hs()
-        
+
         self.ghost_layer = pygame.Surface((GAME_W, GAME_H))
         self.ghost_layer.fill(TRUEGREEN)
-    
+
     def load_highscore(self):
         try:
             with open('.highscore', "r") as f:
                 self.high_score = int(f.read())
         except:
             pass
-            
+
     def save_highscore(self):
         try:
             with open('.highscore', 'w') as f:
                 f.write(str(self.high_score))
         except:
             pass
-    
+
     def update_scrolltext_hs(self):
         scrolltext_hs = scrolltext.replace('[HS]', str(self.high_score))
         self.scroll_text = self.scroll_font.render(scrolltext_hs, True, BLACK)
         self.scroll_rect = self.scroll_text.get_rect(left=GAME_W, top=GAME_H - OFFSET - FONT_SIZE)
-        
-        
+
+
     def draw(self):
         width = 3 if self.oldsnake else 5
         pygame.draw.rect(GAME_SURFACE, BLACK, (OFFSET - 5, TOP_OFFSET + OFFSET - 5, CELL_SIZE * NUM_OF_CELLS_WIDTH + 10, CELL_SIZE * NUM_OF_CELLS_HEIGHT + 10), width)
@@ -563,7 +578,7 @@ class Game:
     def update_food_counter(self):
         if not self.active_timer:
             self.food_counter += 1
-            if ANIMAL_FREQUENCY and self.food_counter >= ANIMAL_FREQUENCY: 
+            if ANIMAL_FREQUENCY and self.food_counter >= ANIMAL_FREQUENCY:
                 # new random position, because snake and food have moved
                 self.animal.position = self.animal.create_random_pos(self.snake.body, self.food.position)
                 self.active_timer = True
@@ -574,7 +589,8 @@ class Game:
             self.snake.eat_sound.play()
             self.food.position = self.food.create_random_pos(self.snake.body)
             self.snake.add_block = True
-            self.score += 7
+            base_score = 4 + (self.current_level * 2)
+            self.score += base_score
             self.update_food_counter()
             # different retro bonus in old snake
             if self.oldsnake and self.score > RETRO_BONUS_AFTER_SCORE:
@@ -600,7 +616,10 @@ class Game:
                 self.snake.eat_phone_sound.play()
             self.animal.position = self.animal.create_random_pos(self.snake.body, self.food.position)
             self.snake.add_block = True
-            self.score += 40
+            time_left = 9 - (self.num_of_frames // FRAME_RATE)
+            bonus_score = int((time_left / 9.0) * 40) + 5 # takaa vähintään 5p jos ehtii viime tingassa
+
+            self.score += bonus_score
             self.reset_timer()
 
     def check_collision_with_edges(self):
@@ -619,7 +638,7 @@ class Game:
         self.snake.body.pop(0)
         self.snake.body_directions.pop(0)
         self.snake.body_foods.pop(0)
-        
+
         if self.score > self.high_score and not self.oldsnake:
             self.snake.highscore_sound.play()
             self.high_score = self.score
@@ -628,7 +647,7 @@ class Game:
         else:
             self.snake.gameover_sound.play()
             self.gameover_text = 'GAME OVER'
-            
+
         self.status = "GAME_OVER"
         pygame.time.set_timer(EV_GAME_OVER_TIMEOUT, GAMEOVER_TIMEOUT_MS)
         pygame.time.set_timer(EV_ENABLE_INPUT, ENABLE_INPUT_AFTER_GAMEOVER_MS)
@@ -641,8 +660,22 @@ class Game:
         self.food.position = self.food.create_random_pos(self.snake.body)
         self.score = 0
         self.status = "PLAYING"
+        self.current_level = 0
+        self.current_delay = SNAKE_UPDATE_MS
+        pygame.time.set_timer(EV_SNAKE_UPDATE, self.current_delay)
         self.reset_timer()
 
+    def levelup(self):
+        # check, if snake has grown and if we get to next level
+        new_level = (len(self.snake.body) - 3) // LEVEL_UP_INTERVAL
+        # if level up, update timer
+        if new_level > self.current_level:
+            self.current_level = new_level
+            # calculate new delay
+            self.current_delay = max(MIN_SNAKE_UPDATE, SNAKE_UPDATE_MS - (self.current_level * SPEED_DROP_PER_LEVEL))
+            # update timer
+            pygame.time.set_timer(EV_SNAKE_UPDATE, self.current_delay)
+            #print(f"Level up! New level: {self.current_level}, update interval: {self.current_delay}ms")
 
     def QUIT(self):
         pygame.quit()
@@ -650,8 +683,10 @@ class Game:
 
 
     def run(self):
+        pygame.key.set_repeat(50, 50)
+        pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
         windowresized = True    # first time update (flip) everything
-        while True:                
+        while True:
             for ev in pygame.event.get():
                 if ev.type == pygame.VIDEORESIZE:
                     windowresized = True
@@ -691,6 +726,7 @@ class Game:
                     if (self.status == "PRE_GAME" or (self.status == "GAME_OVER" and self.input_active)) and (len(self.joysticks.buttons) or self.joysticks.move.y or self.joysticks.move.x):
                         self.play()
                     self.update()
+                    self.levelup()
                 if ev.type == pygame.KEYDOWN:
                     if (self.status == "PRE_GAME" or self.status == "GAME_OVER") and self.input_active:
                         # 0 / O / N: cycle next overlay
@@ -707,7 +743,7 @@ class Game:
                             self.snake.direction = Vector2(-1, 0)
                         if (ev.key == pygame.K_RIGHT or ev.key == pygame.K_KP6) and self.snake.current_direction.y:
                             self.snake.direction = Vector2(1, 0)
-                        
+
 
             # lcd ghosting effect. get game surface
             self.ghost_layer.blit(GAME_SURFACE, (0, 0))
@@ -731,21 +767,21 @@ class Game:
                     GAME_SURFACE.blit(go_surf, ((GAME_W - go_rect.width) // 2, (GAME_H - go_rect.height) // 2))
                 else:
                     GAME_SURFACE.blit(titleimage, ((GAME_W - titleimage.get_width()) // 2, (GAME_H - titleimage.get_height()) // 2))
-                
+
                     # scrolltext
                     self.scroll_rect.x -= SCROLLTEXT_SPEED
                     if self.scroll_rect.right <= 0:           # if scrolled to end
                         self.scroll_rect.x = GAME_W*2         # then move to right side
                     GAME_SURFACE.blit(self.scroll_text, self.scroll_rect)
             else:
-                
+
                 # then the rest of the drawing
                 self.draw()
                 if not self.oldsnake:
                     score_text = "{:04d}".format(self.score)
                     score_surface = self.score_font.render(score_text, True, BLACK)
                     GAME_SURFACE.blit(score_surface, (OFFSET - 4, OFFSET - 60 + 42))
-                
+
                 if self.status == 'GAME_OVER':
                     go_surf = self.scroll_font.render(self.gameover_text, True, BLACK);
                     if self.oldsnake:
@@ -772,14 +808,14 @@ class Game:
                     GAME_SURFACE.blit(seconds_surface, (OFFSET - FONT_SIZE / 1.7 + CELL_SIZE * NUM_OF_CELLS_WIDTH, OFFSET - 60 + 42))
 
             WIN_W, WIN_H = MAIN_SCREEN.get_size()
-            
+
             # game surface to middle of the screen
             OFFSET_X = (OVERLAY_W - GAME_W) // 2
             OFFSET_Y = (OVERLAY_H - GAME_H) // 2
 
             # center it in the window
             MAIN_SCREEN.blit(GAME_SURFACE, (OFFSET_X - (OVERLAY_W-WIN_W)//2, OFFSET_Y - (OVERLAY_H-WIN_H)//2))   # working
-            
+
             # overlay
             if overlay:
                 MAIN_SCREEN.blit(overlay, (-(OVERLAY_W-WIN_W)//2, -(OVERLAY_H-WIN_H)//2))
@@ -791,7 +827,7 @@ class Game:
             else:
                 # update only game surface area of the window
                 pygame.display.update(GAME_SURFACE.get_rect().move((OFFSET_X - (OVERLAY_W-WIN_W)//2, OFFSET_Y - (OVERLAY_H-WIN_H)//2)))
-            
+
             self.clock.tick(FRAME_RATE)
 
 
@@ -801,8 +837,8 @@ if __name__ == '__main__':
             reinit_globals()
             game = Game(oldsnake)
             game.run()
-            pygame.mixer.stop()    # stop playing 
+            pygame.mixer.stop()    # stop playing
             reinit_next_game_cmdline()
     except KeyboardInterrupt:
         game.QUIT()
-    
+
