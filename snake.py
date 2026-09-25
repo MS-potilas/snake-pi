@@ -690,6 +690,10 @@ class Game:
             for ev in pygame.event.get():
                 if ev.type == pygame.VIDEORESIZE:
                     windowresized = True
+                if ev.type == pygame.ACTIVEEVENT:
+                    # event.gain == 1 means focus is back.
+                    if fullscreen and ev.gain == 1:
+                        windowresized = True
                 if ev.type == EV_ENABLE_INPUT:
                     pygame.time.set_timer(EV_ENABLE_INPUT, 0)
                     self.input_active = True
@@ -822,7 +826,10 @@ class Game:
 
             # update display
             if windowresized:
-                pygame.display.update(MAIN_SCREEN.get_rect())   # update the window area
+                if fullscreen:
+                    pygame.display.flip()
+                else:
+                    pygame.display.update(MAIN_SCREEN.get_rect())   # update the window area
                 windowresized = False
             else:
                 # update only game surface area of the window
