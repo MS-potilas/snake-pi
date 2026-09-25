@@ -201,6 +201,18 @@ publisher:   Public Domain
 
     > *Image path:* `~/RetroPie/roms/ports/snake-pi/assets/snake_collage.jpg`
 
+---
+
+## Video Demonstration
+
+Here I play Snake II style game with Nokia 3310 overlay:
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=Q13PUjIhlHc">
+    <img src="https://i.ytimg.com/vi/Q13PUjIhlHc/hqdefault.jpg" width="70%" alt="Snake Pi gameplay">
+  </a >
+</p>
+
 
 ## License
 
