@@ -470,7 +470,7 @@ class Food:
 
 
 class Animal:
-    def __init__(self, snake_body, food_position, active_timer):
+    def __init__(self, snake_body, food_position):
         self.position = self.create_random_pos(snake_body, food_position)
         self.image = None
         self.bigimage = None
@@ -486,11 +486,10 @@ class Animal:
         self.image = scale(IMAGES["animal" + str(random_number)], (CELL_SIZE, CELL_SIZE))
         self.bigimage =  scale(IMAGES["animal" + str(random_number)], (round(CELL_SIZE*1.5), round(CELL_SIZE*1.5)))
 
-    def draw(self, active_timer):
-        if active_timer:
-            animal_surface = self.image
-            animal_rect = pygame.Rect(OFFSET + self.position.x * CELL_SIZE, TOP_OFFSET + OFFSET + self.position.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-            GAME_SURFACE.blit(animal_surface, animal_rect)
+    def draw(self):
+        animal_surface = self.image
+        animal_rect = pygame.Rect(OFFSET + self.position.x * CELL_SIZE, TOP_OFFSET + OFFSET + self.position.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        GAME_SURFACE.blit(animal_surface, animal_rect)
 
     def get_random_cell(self):
         x = random.randint(0, NUM_OF_CELLS_WIDTH - 1)
@@ -513,9 +512,9 @@ class Game:
         self.status = "PRE_GAME"
         self.score = 0
         self.food_counter = 0
-        self.num_of_frames = 0
         self.active_timer = False
-        self.animal = Animal(self.snake.body, self.food.position, self.active_timer)
+        self.timer_time = 0
+        self.animal = Animal(self.snake.body, self.food.position)
         self.joysticks = Joystick()
         # select random nokia tune for title screen
         self.nokia_tune = pygame.mixer.Sound(tunename)
@@ -564,7 +563,8 @@ class Game:
             pygame.draw.line(GAME_SURFACE, BLACK, (OFFSET - 5, TOP_OFFSET + OFFSET - 15), (OFFSET + 5 + CELL_SIZE * NUM_OF_CELLS_WIDTH, TOP_OFFSET + OFFSET - 15), width)
         self.snake.draw()
         self.food.draw()
-        self.animal.draw(self.active_timer)
+        if self.active_timer:
+            self.animal.draw()
 
     def update(self):
         if self.status == "PLAYING":
@@ -582,6 +582,7 @@ class Game:
                 # new random position, because snake and food have moved
                 self.animal.position = self.animal.create_random_pos(self.snake.body, self.food.position)
                 self.active_timer = True
+                self.timer_time = pygame.time.get_ticks()
 
     def check_collision_with_food(self):
         if self.snake.body[0] == self.food.position:
@@ -598,7 +599,6 @@ class Game:
 
     def reset_timer(self):
         self.food_counter = 0
-        self.num_of_frames = 0
         self.active_timer = False
         self.animal.create_random_image(self.score > RETRO_BONUS_AFTER_SCORE)
 
@@ -616,7 +616,7 @@ class Game:
                 self.snake.eat_phone_sound.play()
             self.animal.position = self.animal.create_random_pos(self.snake.body, self.food.position)
             self.snake.add_block = True
-            time_left = 9 - (self.num_of_frames // FRAME_RATE)
+            time_left = (self.timer_time + 9999 - pygame.time.get_ticks()) // 1000
             bonus_score = int((time_left / 9.0) * 40) + 5 # takaa vähintään 5p jos ehtii viime tingassa
 
             self.score += bonus_score
@@ -660,10 +660,10 @@ class Game:
         self.food.position = self.food.create_random_pos(self.snake.body)
         self.score = 0
         self.status = "PLAYING"
+        self.reset_timer()
         self.current_level = 0
         self.current_delay = SNAKE_UPDATE_MS
         pygame.time.set_timer(EV_SNAKE_UPDATE, self.current_delay)
-        self.reset_timer()
 
     def levelup(self):
         # check, if snake has grown and if we get to next level
@@ -800,11 +800,9 @@ class Game:
                     GAME_SURFACE.blit(go_surf, ( (GAME_W-go_rect.right)//2, y))
 
                 if self.active_timer:
-                    total_seconds = 9 - (self.num_of_frames // FRAME_RATE)
+                    total_seconds = (self.timer_time + 9999 - pygame.time.get_ticks()) // 1000
                     if total_seconds < 1:
-                        total_seconds = 0
                         self.reset_timer()
-                    self.num_of_frames += 1
                 if self.active_timer:
                     animal_rect = pygame.Rect(OFFSET - FONT_SIZE * 1.6 + CELL_SIZE * NUM_OF_CELLS_WIDTH - CELL_SIZE/2, OFFSET - 60 + TOP_OFFSET + FONT_SIZE / 4 - CELL_SIZE/4, round(CELL_SIZE*1.5), round(CELL_SIZE*1.5))
                     GAME_SURFACE.blit(self.animal.bigimage, animal_rect)
