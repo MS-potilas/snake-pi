@@ -685,6 +685,7 @@ class Game:
     def run(self):
         pygame.key.set_repeat(50, 50)
         pygame.time.set_timer(EV_PLAY_MUSIC, PLAY_TITLE_MUSIC_AFTER_MS)
+        pygame.time.set_timer(EV_SNAKE_UPDATE, self.current_delay)
         windowresized = True    # first time update (flip) everything
         while True:
             for ev in pygame.event.get():
