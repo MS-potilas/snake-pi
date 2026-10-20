@@ -75,6 +75,7 @@ EV_ENABLE_INPUT = pygame.USEREVENT + 2
 EV_GAME_OVER_TIMEOUT = pygame.USEREVENT + 3
 EV_PLAY_MUSIC = pygame.USEREVENT + 4
 
+
 # don't know if this works on windows or mac
 def is_windowing_system():
     if sys.platform == 'windows' or sys.platform == 'darwin': # windows or mac
@@ -345,16 +346,23 @@ class Joystick:
             axes = joystick.get_numaxes()
             for ii in range(axes):
                 axis = joystick.get_axis(ii)
-                if ii == 0:
+                if ii == 0 or ii == 2:
                     if axis < -0.5:
                         self.move.x = -1
                     if axis > 0.5:
                         self.move.x = 1
-                if ii == 1:
+                if ii == 1 or ii == 3:
                     if axis < -0.5:
                         self.move.y = -1
                     if axis > 0.5:
                         self.move.y = 1
+            hats = joystick.get_numhats()
+            for ii in range(hats):
+                mx, my = joystick.get_hat(ii)
+                if mx:
+                    self.move.x = mx
+                if my:
+                    self.move.y = -my
             # get buttons
             numbuttons = joystick.get_numbuttons()
             for i in range(numbuttons):
